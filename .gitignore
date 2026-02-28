@@ -17,3 +17,7 @@ instance/
 # Редакторы
 .vscode/
 .idea/
+.DS_Store
+*.egg-info/
+.DS_Store
+*.egg-info/
