@@ -1,7 +1,12 @@
 from app import create_app          # Функция для создания приложения Flask
-from extensions import db           # Объект базы данных SQLAlchemy
-from models.menu import Category, MenuItem  # Модели категорий и блюд
-from models.user import User        # Модель пользователя (если нужна)
+from app.extensions import db      # Объект базы данных SQLAlchemy
+from app.models.menu import Category, MenuItem  # Модели категорий и блюд
+from app.models.user import User   # Модель пользователя (если нужна)
+
+# ВАЖНО: импортируем все модели, чтобы SQLAlchemy успел зарегистрировать имена
+# до конфигурации relationship'ов (например, MenuItem -> OrderItem).
+from app.models.order import Order, OrderItem  # noqa: F401
+from app.models.reservation import Reservation, Table  # noqa: F401
 
 
 # Создаем экземпляр приложения
@@ -9,7 +14,10 @@ app = create_app()
 
 
 with app.app_context():
-    
+    # Создаем таблицы перед первыми запросами.
+    # Это нужно, чтобы не падать на ошибке вида `no such table: categories`.
+    db.create_all()
+
     # ========== ЧАСТЬ 1: ПРОВЕРКА И СОЗДАНИЕ КАТЕГОРИЙ ==========
     
 
