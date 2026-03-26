@@ -163,6 +163,10 @@ body {
   padding-bottom: 1.25rem;
 }
 
+.mifud-auth-block .mifud-title.fs-1 {
+  font-size: clamp(2rem, 8vw, 3rem) !important;
+}
+
 .mifud-auth-actions {
   display: flex;
   align-items: center;

@@ -1,1 +1,56 @@
-{# TODO: шаблон #}
+{% extends "base.html" %}
+
+{% block title %}Вход | МИФУД{% endblock %}
+
+{% block content %}
+  <section class="mifud-auth-block py-4">
+    <div class="text-center mb-4">
+      <div class="mifud-auth-logo mx-auto mb-3">
+        <span class="fw-bold fs-3" aria-hidden="true">⚛</span>
+      </div>
+      <div class="mifud-title fs-1 lh-1 mb-2">МИФУД</div>
+      <div class="fw-semibold">Система предзаказа еды · НИЯУ МИФИ</div>
+    </div>
+
+    <div class="mx-auto" style="max-width: 360px;">
+      <h1 class="h4 mifud-title mb-4">Войти в аккаунт</h1>
+
+      <form method="post" action="/auth/login" class="d-grid gap-3">
+        <div>
+          <label class="visually-hidden" for="email">Email</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            class="form-control form-control-lg mifud-input"
+            placeholder="EMAIL"
+            autocomplete="email"
+            required
+          />
+        </div>
+
+        <div>
+          <label class="visually-hidden" for="password">Пароль</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            class="form-control form-control-lg mifud-input"
+            placeholder="ПАРОЛЬ"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+
+        <button type="submit" class="btn mifud-btn-primary btn-lg w-100 mt-2">ВОЙТИ</button>
+      </form>
+
+      <div class="mifud-auth-actions mt-3">
+        <span class="fw-semibold">Нет аккаунта?</span>
+        <a class="fw-bold text-decoration-none text-primary" href="/auth/register">
+          ЗАРЕГИСТРИРОВАТЬСЯ →
+        </a>
+      </div>
+    </div>
+  </section>
+{% endblock %}
