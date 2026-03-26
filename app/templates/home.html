@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}МИФУД{% endblock %}
+
+{% block content %}
+  <div class="py-4">
+    <div class="mifud-card p-4">
+      <h1 class="h4 mifud-title mb-2">МИФУД</h1>
+      <p class="mb-3 mifud-text-muted">
+        Базовая страница для предпросмотра макетов (Bootstrap 5 + ваш CSS).
+      </p>
+      <div class="d-grid gap-2">
+        <a class="btn mifud-btn-primary" href="/auth/login">Войти</a>
+        <a class="btn btn-outline-primary" href="/auth/register">Регистрация</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
