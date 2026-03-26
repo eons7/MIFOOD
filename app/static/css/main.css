@@ -151,11 +151,17 @@ body {
   width: 84px;
   height: 84px;
   border-radius: 999px;
-  border: 2px solid rgba(11, 94, 168, 0.25);
+  border: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: var(--mifud-blue);
+}
+
+.mifud-logo-svg {
+  width: 84px;
+  height: 84px;
+  display: block;
 }
 
 .mifud-auth-block {
