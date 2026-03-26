@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from extensions import db
 
-
+#-
 class Category(db.Model):
     __tablename__ = 'categories'
 
@@ -33,3 +33,5 @@ class MenuItem(db.Model):
 
     def __repr__(self):
         return f'<MenuItem {self.name} — {self.price}₽>'
+    def toggle_availability(self):
+        self.is_available = not self.is_available

@@ -37,7 +37,16 @@ class Order(db.Model):
             item.quantity * item.menu_item.price
             for item in self.order_items
         )
-        return self.total_price
+    def is_cancellable(self):
+        return self.status in ['pending', 'confirmed']
+    @classmethod
+    def get_active_count(cls, user_id):
+        return Order.query.filter(
+            Order.user_id == user_id,
+            Order.status.in_(['pending', 'confirmed', 'ready'])
+        ).count()
+
+     
 
     def __repr__(self):
         return f'<Order #{self.id} [{self.status}]>'
@@ -50,6 +59,9 @@ class OrderItem(db.Model):
     order_id     = db.Column(db.Integer, db.ForeignKey('orders.id'),     nullable=False)
     menu_item_id = db.Column(db.Integer, db.ForeignKey('menu_items.id'), nullable=False)
     quantity     = db.Column(db.Integer, nullable=False, default=1)
-
+    
+    def get_subtotal(self):
+        return self.menu_item.price * self.quantity
+        
     def __repr__(self):
         return f'<OrderItem order={self.order_id} item={self.menu_item_id} x{self.quantity}>'
