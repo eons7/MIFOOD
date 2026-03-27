@@ -1,4 +1,4 @@
-from flask import Flask, render_template, send_file
+from flask import Flask, render_template
 from .extensions import db, migrate, login_manager
 from .config import config
 
@@ -6,17 +6,6 @@ from .config import config
 def create_app(config_name="development"):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
-
-    # DEV-only: раздаём PNG логотипа из папки assets вне репозитория,
-    # чтобы быстро увидеть макет без копирования бинарника в app/static.
-    # Позже лучше положить файл в `app/static/...` и убрать этот роут.
-    import os
-
-    logo_path = "/Users/a1/.cursor/projects/Users-a1-Desktop-MIFOOD/assets/____-d6019eac-9dc4-41a5-b80f-c16ecd82e521.png"
-    if os.path.exists(logo_path):
-        @app.get("/logo.png")
-        def mifud_logo():
-            return send_file(logo_path, mimetype="image/png")
 
     @app.get("/")
     def home():
