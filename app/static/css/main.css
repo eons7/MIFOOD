@@ -148,19 +148,26 @@ body {
    Экран логина / регистрации
    ----------------------------- */
 .mifud-auth-logo {
-  width: 84px;
-  height: 84px;
-  border-radius: 999px;
-  border: 2px solid rgba(11, 94, 168, 0.25);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--mifud-blue);
+  width: 220px;
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.mifud-auth-logo .mifud-logo-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
 }
 
 .mifud-auth-block {
   padding-top: 1.25rem;
   padding-bottom: 1.25rem;
+}
+
+.mifud-auth-block .mifud-title.fs-1 {
+  font-size: clamp(2rem, 8vw, 3rem) !important;
 }
 
 .mifud-auth-actions {
