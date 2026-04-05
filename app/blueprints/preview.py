@@ -6,7 +6,7 @@
 """
 
 from datetime import datetime, timedelta
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, request
 
 preview_bp = Blueprint('preview', __name__, url_prefix='/preview')
 
@@ -164,8 +164,20 @@ def order_create():
 
 @preview_bp.get('/order/select_table')
 def order_select_table():
+    selected = request.args.get('selected', type=int)
+
+    statuses = dict(table_statuses)
+    if selected:
+        for tid in statuses:
+            if statuses[tid] in ('selected', 'free'):
+                statuses[tid] = 'selected' if tid == selected else 'free'
+
+    if request.headers.get('HX-Request'):
+        return render_template('orders/_tables_grid.html',
+                               tables=tables, table_statuses=statuses, order=order)
+
     return render_template('orders/select_table.html',
-                           order=order, tables=tables, table_statuses=table_statuses,
+                           order=order, tables=tables, table_statuses=statuses,
                            current_user=FakeUser())
 
 

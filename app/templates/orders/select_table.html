@@ -22,41 +22,9 @@
     <p class="fw-bold mb-3">Столы на {{ order.pickup_time.strftime('%H:%M') }}</p>
 
     <form method="post" action="/orders/{{ order.id }}/select_table">
-      {# Сетка столов #}
-      <div class="d-grid gap-2 mb-4">
-        {% for table in tables %}
-          {% set status = table_statuses.get(table.id, 'free') %}
-          <label class="mifud-table-card {{ 'is-busy' if status == 'busy' else '' }}{{ 'is-selected' if status == 'selected' else '' }}{{ 'is-closed' if status == 'closed' else '' }}">
-            {% if status != 'busy' and status != 'closed' %}
-              <input
-                type="radio"
-                name="table_id"
-                value="{{ table.id }}"
-                class="visually-hidden"
-                {{ 'checked' if status == 'selected' else '' }}
-              />
-            {% endif %}
-            <div class="d-flex align-items-center justify-content-between">
-              <div>
-                <span class="fw-800 fs-5">№{{ table.number }}</span>
-                {% if status == 'selected' %}<span class="ms-1">✓</span>{% endif %}
-                <br />
-                <span class="small text-muted">{{ table.seats }} места</span>
-              </div>
-              <div class="small fw-bold text-end">
-                {% if status == 'busy' %}
-                  <span class="text-primary" data-status>занят</span>
-                {% elif status == 'closed' %}
-                  <span class="text-muted" data-status>закрыт</span>
-                {% elif status == 'selected' %}
-                  <span class="text-warning" data-status>выбран</span>
-                {% else %}
-                  <span class="text-success" data-status>свободен</span>
-                {% endif %}
-              </div>
-            </div>
-          </label>
-        {% endfor %}
+      {# Сетка столов (HTMX) #}
+      <div id="tables-grid" class="d-grid gap-2 mb-4">
+        {% include "orders/_tables_grid.html" %}
       </div>
 
       {# Информация о выбранном заказе #}
@@ -85,27 +53,4 @@
       </div>
     </form>
   </section>
-{% endblock %}
-
-{% block scripts %}
-<script>
-  document.querySelectorAll('.mifud-table-card').forEach(card => {
-    const radio = card.querySelector('input[type="radio"]');
-    if (!radio) return;
-
-    card.addEventListener('click', () => {
-      document.querySelectorAll('.mifud-table-card').forEach(c => {
-        if (c.classList.contains('is-busy') || c.classList.contains('is-closed')) return;
-        c.classList.remove('is-selected');
-        const statusEl = c.querySelector('[data-status]');
-        if (statusEl) statusEl.textContent = 'свободен';
-      });
-
-      radio.checked = true;
-      card.classList.add('is-selected');
-      const statusEl = card.querySelector('[data-status]');
-      if (statusEl) statusEl.textContent = 'выбран';
-    });
-  });
-</script>
 {% endblock %}
