@@ -152,14 +152,14 @@ def register():
 def menu():
     return render_template('menu/index.html',
                            categories=cats, items=menu_items, cart_total=279,
-                           current_user=FakeUser())
+                           current_user=FakeUser(), active_tab='menu')
 
 
 @preview_bp.get('/order/create')
 def order_create():
     return render_template('orders/create.html',
                            order_items=order_items, total_price=279,
-                           current_user=FakeUser())
+                           current_user=FakeUser(), active_tab='orders')
 
 
 @preview_bp.get('/order/select_table')
@@ -178,28 +178,28 @@ def order_select_table():
 
     return render_template('orders/select_table.html',
                            order=order, tables=tables, table_statuses=statuses,
-                           current_user=FakeUser())
+                           current_user=FakeUser(), active_tab='orders')
 
 
 @preview_bp.get('/order/status')
 def order_status():
     return render_template('orders/status.html',
                            order=order,
-                           current_user=FakeUser())
+                           current_user=FakeUser(), active_tab='orders')
 
 
 @preview_bp.get('/orders')
 def my_orders():
     return render_template('orders/my_orders.html',
                            orders=admin_orders,
-                           current_user=FakeUser())
+                           current_user=FakeUser(), active_tab='orders')
 
 
 @preview_bp.get('/reservations')
 def my_reservations():
     return render_template('reservations/index.html',
                            reservations=reservations,
-                           current_user=FakeUser())
+                           current_user=FakeUser(), active_tab='reservations')
 
 
 @preview_bp.get('/admin/orders')
@@ -208,7 +208,7 @@ def admin_orders_page():
     return render_template('admin/index.html',
                            orders=admin_orders, counts=counts,
                            active_count=5, today=now.strftime('%d.%m.%Y'),
-                           current_user=FakeAdmin())
+                           current_user=FakeAdmin(), active_tab='orders')
 
 
 @preview_bp.get('/admin/menu')
@@ -216,4 +216,4 @@ def admin_menu_page():
     counts = {'all': 5, 'available': 4, 'unavailable': 1}
     return render_template('admin/menu.html',
                            items=menu_items, counts=counts,
-                           current_user=FakeAdmin())
+                           current_user=FakeAdmin(), active_tab='menu')

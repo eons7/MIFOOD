@@ -20,7 +20,7 @@
   </head>
 
   <body class="bg-white mifud-body">
-    {% set bp = request.blueprint or '' %}
+    {% set bp = active_tab|default(request.blueprint or '') %}
     {% set is_auth = (current_user is defined) and current_user.is_authenticated %}
     {% set is_admin = is_auth and (current_user.is_admin if current_user is defined else false) %}
 
