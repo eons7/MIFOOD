@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Выбор стола | МИФУД{% endblock %}
+
+{% block content %}
+  <section class="py-3">
+    {# Stepper: шаг 2 #}
+    <div class="mifud-steps mb-4">
+      <span class="mifud-step is-done">
+        <span class="mifud-step-dot">1</span> Состав заказа
+      </span>
+      <span class="mifud-step is-current">
+        <span class="mifud-step-dot">2</span> Выбор стола
+      </span>
+      <span class="mifud-step">
+        <span class="mifud-step-dot">3</span> Статус заказа
+      </span>
+    </div>
+
+    <h1 class="h5 mifud-title">Выберите стол</h1>
+    <p class="text-muted small mb-1">Заказ #{{ order.id }}&nbsp;&middot;&nbsp;Время получения {{ order.pickup_time.strftime('%H:%M') }}</p>
+    <p class="fw-bold mb-3">Столы на {{ order.pickup_time.strftime('%H:%M') }}</p>
+
+    <form method="post" action="/orders/{{ order.id }}/select_table">
+      {# Сетка столов #}
+      <div class="d-grid gap-2 mb-4">
+        {% for table in tables %}
+          {% set status = table_statuses.get(table.id, 'free') %}
+          <label class="mifud-table-card {{ 'is-busy' if status == 'busy' else '' }}{{ 'is-selected' if status == 'selected' else '' }}{{ 'is-closed' if status == 'closed' else '' }}">
+            {% if status != 'busy' and status != 'closed' %}
+              <input
+                type="radio"
+                name="table_id"
+                value="{{ table.id }}"
+                class="visually-hidden"
+                {{ 'checked' if status == 'selected' else '' }}
+              />
+            {% endif %}
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <span class="fw-800 fs-5">№{{ table.number }}</span>
+                {% if status == 'selected' %}<span class="ms-1">✓</span>{% endif %}
+                <br />
+                <span class="small text-muted">{{ table.seats }} места</span>
+              </div>
+              <div class="small fw-bold text-end">
+                {% if status == 'busy' %}
+                  <span class="text-primary">занят</span>
+                {% elif status == 'closed' %}
+                  <span class="text-muted">закрыт</span>
+                {% elif status == 'selected' %}
+                  <span class="text-warning">выбран</span>
+                {% else %}
+                  <span class="text-success">свободен</span>
+                {% endif %}
+              </div>
+            </div>
+          </label>
+        {% endfor %}
+      </div>
+
+      {# Информация о выбранном заказе #}
+      <div class="mifud-card p-3 mb-3">
+        <h2 class="h6 fw-bold mb-2">Ваш заказ #{{ order.id }}</h2>
+        <div class="small text-muted">Время получения: {{ order.pickup_time.strftime('%H:%M') }}</div>
+        <div class="small text-muted">Итого: {{ order.total_price|int }} ₽</div>
+      </div>
+
+      {# Продолжительность #}
+      <div class="mb-4">
+        <label class="fw-bold mb-1" for="duration">Продолжительность:</label>
+        <select id="duration" name="duration" class="form-select mifud-input">
+          <option value="30">30 мин</option>
+          <option value="60" selected>1 час</option>
+          <option value="90">1.5 часа</option>
+        </select>
+      </div>
+
+      {# Кнопки #}
+      <div class="d-grid gap-2">
+        <button type="submit" class="btn mifud-btn-primary btn-lg">ПОДТВЕРДИТЬ БРОНЬ →</button>
+        <a href="/orders/{{ order.id }}/status" class="btn btn-outline-secondary text-center fw-bold">
+          ПРОПУСТИТЬ БРОНИРОВАНИЕ →
+        </a>
+      </div>
+    </form>
+  </section>
+{% endblock %}

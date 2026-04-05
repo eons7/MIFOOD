@@ -1,1 +1,78 @@
-{# TODO: шаблон #}
+{% extends "base.html" %}
+
+{% block title %}Мои брони | МИФУД{% endblock %}
+
+{% block content %}
+  <section class="py-3">
+    <h1 class="h5 mifud-title mb-1">Мои брони</h1>
+    <p class="small text-muted mb-3">Брони создаются при оформлении заказа</p>
+
+    {# Подсказка #}
+    <div class="mifud-card p-3 mb-4">
+      <h2 class="h6 fw-bold mb-1">Как забронировать стол?</h2>
+      <p class="small text-muted mb-2">
+        При оформлении заказа поставьте галочку
+        «Забронировать стол» — вы выберете место на схеме
+        зала. Бронь привязывается к заказу и времени
+        получения.
+      </p>
+      <a href="/menu" class="fw-bold text-decoration-none text-primary">ПЕРЕЙТИ В МЕНЮ →</a>
+    </div>
+
+    {# Активные брони #}
+    {% set active = reservations|selectattr('status', 'equalto', 'active')|list %}
+    {% if active %}
+      <h2 class="h6 mifud-title mb-2">Активные брони</h2>
+      <div class="d-grid gap-3 mb-4">
+        {% for r in active %}
+          <div class="mifud-card p-3">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+              <span class="fw-800">Стол №{{ r.table.number }}</span>
+              <span class="badge text-bg-success">активна</span>
+            </div>
+            <div class="small text-muted">{{ r.table.seats }} места</div>
+            <div class="small text-muted">
+              Сегодня, {{ r.start_time.strftime('%d.%m.%Y') }}
+            </div>
+            <div class="fw-bold text-primary">
+              {{ r.start_time.strftime('%H:%M') }}–{{ r.end_time.strftime('%H:%M') }}
+            </div>
+            <div class="small text-muted mb-2">К заказу #{{ r.order_id }}</div>
+            <a href="/reservations/{{ r.id }}/cancel" class="btn mifud-btn-primary btn-sm w-100">ОТМЕНИТЬ БРОНЬ</a>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {# История #}
+    {% set history = reservations|rejectattr('status', 'equalto', 'active')|list %}
+    {% if history %}
+      <h2 class="h6 mifud-title mb-2">История</h2>
+      <div class="d-grid gap-2">
+        {% for r in history %}
+          <div class="mifud-card p-3" style="opacity: 0.7;">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+              <span class="fw-800">Стол №{{ r.table.number }}</span>
+              {% if r.status == 'completed' %}
+                <span class="badge text-bg-secondary">завершена</span>
+              {% elif r.status == 'cancelled' %}
+                <span class="badge text-bg-danger">отменена</span>
+              {% endif %}
+            </div>
+            <div class="small text-muted">
+              {{ r.start_time.strftime('%d.%m.%Y') }} &middot; {{ r.start_time.strftime('%H:%M') }}–{{ r.end_time.strftime('%H:%M') }}
+            </div>
+            <div class="small text-muted">К заказу #{{ r.order_id }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if not reservations %}
+      <div class="text-center text-muted py-5">
+        <p class="mb-2">У вас пока нет бронирований</p>
+        <a href="/menu" class="btn mifud-btn-primary">ПЕРЕЙТИ В МЕНЮ →</a>
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}

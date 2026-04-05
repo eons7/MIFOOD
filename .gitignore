@@ -19,5 +19,6 @@ instance/
 .idea/
 .DS_Store
 *.egg-info/
-.DS_Store
-*.egg-info/
+
+CLAUDE.md
+.claude/

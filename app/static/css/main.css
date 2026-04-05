@@ -138,6 +138,13 @@ body {
   border-radius: 0.5rem;
 }
 
+.form-control.mifud-input::placeholder,
+.form-select.mifud-input::placeholder {
+  color: var(--mifud-blue);
+  opacity: 1;
+  font-weight: 700;
+}
+
 .form-control.mifud-input:focus,
 .form-select.mifud-input:focus {
   border-color: var(--mifud-orange-700);

@@ -1,1 +1,87 @@
-{# TODO: шаблон #}
+{% extends "base.html" %}
+
+{% block title %}Заказы | Админ | МИФУД{% endblock %}
+
+{% block content %}
+  <section class="py-3">
+    {# Админ-табы: ЗАКАЗЫ / МЕНЮ / СТОЛЫ / БРОНИ #}
+    <nav class="nav nav-pills mifud-admin-tabs shadow-sm mb-3" aria-label="Админ-навигация">
+      <a class="nav-link active" href="/admin">ЗАКАЗЫ</a>
+      <a class="nav-link" href="/admin/menu">МЕНЮ</a>
+      <a class="nav-link" href="/admin/tables">СТОЛЫ</a>
+      <a class="nav-link" href="/admin/reservations">БРОНИ</a>
+    </nav>
+
+    <h1 class="h5 mifud-title mb-1">Входящие заказы</h1>
+    <p class="small text-muted mb-3">
+      Сегодня, {{ today }} &middot; {{ active_count }} активных заказов
+    </p>
+
+    {# Фильтры статусов #}
+    <div class="mifud-chips mb-3">
+      <button class="mifud-chip is-active">ВСЕ ({{ counts.all }})</button>
+      <button class="mifud-chip">ОЖИДАЮТ ({{ counts.pending }})</button>
+      <button class="mifud-chip">ПРИНЯТЫ ({{ counts.confirmed }})</button>
+      <button class="mifud-chip">ГОТОВЫ ({{ counts.ready }})</button>
+    </div>
+
+    {# Таблица заказов #}
+    <div class="table-responsive">
+      <table class="table table-sm mifud-table align-middle">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Время получения</th>
+            <th>Состав</th>
+            <th>Цена</th>
+            <th>Статус</th>
+            <th>Действие</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in orders %}
+            <tr>
+              <td class="fw-bold">{{ order.id }}</td>
+              <td>{{ order.pickup_time.strftime('%H:%M') }}</td>
+              <td class="small">
+                {% for item in order.order_items %}
+                  {{ item.menu_item.name }}{% if item.quantity > 1 %}&nbsp;&times;&nbsp;{{ item.quantity }}{% endif %}{% if not loop.last %},<br>{% endif %}
+                {% endfor %}
+              </td>
+              <td class="fw-bold">{{ order.total_price|int }} ₽</td>
+              <td>
+                {% set status_labels = {'pending': 'Ожидает', 'confirmed': 'Принят', 'ready': 'Готов', 'completed': 'Выдан', 'cancelled': 'Отменён'} %}
+                <span class="small fw-bold">{{ status_labels.get(order.status, order.status) }}</span>
+              </td>
+              <td>
+                {% if order.status == 'pending' %}
+                  <a href="/admin/orders/{{ order.id }}/confirm" class="btn mifud-btn-primary btn-sm">ПРИНЯТЬ</a>
+                {% elif order.status == 'confirmed' %}
+                  <a href="/admin/orders/{{ order.id }}/ready" class="btn mifud-btn-primary btn-sm">ГОТОВО</a>
+                {% elif order.status == 'ready' %}
+                  <a href="/admin/orders/{{ order.id }}/complete" class="btn mifud-btn-primary btn-sm">ВЫДАТЬ</a>
+                {% else %}
+                  <span class="btn btn-sm btn-outline-secondary disabled">ГОТОВО</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="6" class="text-center text-muted py-3">Нет заказов</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# Подсказка: цепочка статусов #}
+    <div class="mifud-card p-3 mt-3">
+      <h2 class="h6 fw-bold mb-2">Цепочка статусов</h2>
+      <div class="fw-bold text-center">
+        Ожидает → Принят → Готов → Выдан
+        <span class="mx-2">ИЛИ</span>
+        Отменён
+      </div>
+    </div>
+  </section>
+{% endblock %}
