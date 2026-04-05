@@ -45,13 +45,13 @@
               </div>
               <div class="small fw-bold text-end">
                 {% if status == 'busy' %}
-                  <span class="text-primary">занят</span>
+                  <span class="text-primary" data-status>занят</span>
                 {% elif status == 'closed' %}
-                  <span class="text-muted">закрыт</span>
+                  <span class="text-muted" data-status>закрыт</span>
                 {% elif status == 'selected' %}
-                  <span class="text-warning">выбран</span>
+                  <span class="text-warning" data-status>выбран</span>
                 {% else %}
-                  <span class="text-success">свободен</span>
+                  <span class="text-success" data-status>свободен</span>
                 {% endif %}
               </div>
             </div>
@@ -85,4 +85,27 @@
       </div>
     </form>
   </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.querySelectorAll('.mifud-table-card').forEach(card => {
+    const radio = card.querySelector('input[type="radio"]');
+    if (!radio) return;
+
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.mifud-table-card').forEach(c => {
+        if (c.classList.contains('is-busy') || c.classList.contains('is-closed')) return;
+        c.classList.remove('is-selected');
+        const statusEl = c.querySelector('[data-status]');
+        if (statusEl) statusEl.textContent = 'свободен';
+      });
+
+      radio.checked = true;
+      card.classList.add('is-selected');
+      const statusEl = card.querySelector('[data-status]');
+      if (statusEl) statusEl.textContent = 'выбран';
+    });
+  });
+</script>
 {% endblock %}
