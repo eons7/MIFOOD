@@ -1,1 +1,116 @@
-{# TODO: шаблон #}
+{% extends "base.html" %}
+
+{% block title %}Заказ #{{ order.id }} | МИФУД{% endblock %}
+
+{% block content %}
+  <section class="py-3">
+    {# Stepper: шаг 3 #}
+    <div class="mifud-steps mb-4">
+      <span class="mifud-step is-done">
+        <span class="mifud-step-dot">1</span> Состав заказа
+      </span>
+      <span class="mifud-step is-done">
+        <span class="mifud-step-dot">2</span> Выбор стола
+      </span>
+      <span class="mifud-step is-current">
+        <span class="mifud-step-dot">3</span> Статус заказа
+      </span>
+    </div>
+
+    {# Заголовок заказа #}
+    <div class="mb-3">
+      <h1 class="h5 mifud-title mb-0">Заказ #{{ order.id }}</h1>
+      <span class="small text-muted">Оформлен {{ order.created_at.strftime('%d.%m.%Y в %H:%M') }}</span>
+    </div>
+
+    {# Таблица состава #}
+    <div class="mifud-card p-3 mb-3">
+      <h2 class="h6 fw-bold mb-2">Состав заказа</h2>
+      <table class="table table-sm mb-0 align-middle">
+        <thead>
+          <tr>
+            <th class="fw-bold">Блюдо</th>
+            <th class="fw-bold text-center">Кол-во</th>
+            <th class="fw-bold text-end">Цена</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in order.order_items %}
+            <tr>
+              <td>{{ item.menu_item.name }}</td>
+              <td class="text-center">{{ item.quantity }}</td>
+              <td class="text-end">{{ (item.menu_item.price * item.quantity)|int }} ₽</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr class="fw-bold">
+            <td colspan="2">Итого</td>
+            <td class="text-end">{{ order.total_price|int }} ₽</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    {# Кнопка оплаты #}
+    <div class="d-grid gap-2 mb-3">
+      <a href="#" class="btn mifud-btn-primary btn-lg">ОПЛАТИТЬ ОНЛАЙН →</a>
+    </div>
+
+    {# Ссылки: все заказы / отменить #}
+    <div class="d-flex justify-content-between mb-4">
+      <a href="/orders" class="fw-bold text-decoration-none text-primary">← ВСЕ ЗАКАЗЫ</a>
+      {% if order.status in ['pending', 'confirmed'] %}
+        <a href="/orders/{{ order.id }}/cancel" class="fw-bold text-decoration-none text-danger">ОТМЕНИТЬ ЗАКАЗ</a>
+      {% endif %}
+    </div>
+
+    {# Подсказка #}
+    {% if order.status in ['pending', 'confirmed'] %}
+      <div class="alert alert-light border small mb-4">
+        Отменить заказ можно только пока он <strong>не принят в работу</strong>
+      </div>
+    {% endif %}
+
+    {# Таймлайн статуса #}
+    <h2 class="h6 fw-bold mb-2">Статус заказа</h2>
+    <div class="mifud-timeline mb-4">
+      {% set statuses = [
+        ('pending',    'Оформлен',        order.created_at.strftime('%H:%M')),
+        ('confirmed',  'Ожидает',         'столовая ещё не приняла'),
+        ('confirmed',  'Принят в работу', ''),
+        ('ready',      'Готов к выдаче',  ''),
+        ('completed',  'Выдан',           '')
+      ] %}
+      {% for status_key, label, note in statuses %}
+        {% if loop.index == 1 %}
+          <div class="mifud-timeline-item is-done">
+        {% elif order.status == status_key and loop.index == 2 %}
+          <div class="mifud-timeline-item is-active">
+        {% elif order.status in ['confirmed', 'ready', 'completed'] and loop.index <= 3 %}
+          <div class="mifud-timeline-item is-done">
+        {% elif order.status in ['ready', 'completed'] and loop.index == 4 %}
+          <div class="mifud-timeline-item is-done">
+        {% elif order.status == 'completed' and loop.index == 5 %}
+          <div class="mifud-timeline-item is-done">
+        {% else %}
+          <div class="mifud-timeline-item">
+        {% endif %}
+            <div class="d-flex align-items-center gap-2">
+              <span class="fw-bold small text-muted">{{ loop.index }}</span>
+              <span class="fw-bold">{{ label }}</span>
+            </div>
+            {% if note %}
+              <div class="small text-muted">{{ note }}</div>
+            {% endif %}
+          </div>
+      {% endfor %}
+    </div>
+
+    {# Время получения #}
+    <div class="d-flex align-items-center justify-content-between fw-bold">
+      <span>Время получения:</span>
+      <span>{{ order.pickup_time.strftime('%H:%M') }} сегодня</span>
+    </div>
+  </section>
+{% endblock %}
