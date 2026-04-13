@@ -42,4 +42,9 @@ def create_app(config_name="development"):
     app.register_blueprint(orders_bp)
     app.register_blueprint(reservations_bp)
 
+    # Временный blueprint для просмотра вёрстки без бэкенда.
+    # Удалить после реализации настоящих routes.
+    from .blueprints.preview import preview_bp
+    app.register_blueprint(preview_bp)
+
     return app

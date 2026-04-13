@@ -1,1 +1,10 @@
-{# TODO: шаблон #}
+{# Partial: бейдж статуса заказа #}
+{% set badge_map = {
+  'pending':   ('Ожидает',   'warning'),
+  'confirmed': ('Принят',    'primary'),
+  'ready':     ('Готов',     'success'),
+  'completed': ('Выдан',     'secondary'),
+  'cancelled': ('Отменён',   'danger')
+} %}
+{% set label, color = badge_map.get(order.status, ('—', 'secondary')) %}
+<span class="badge text-bg-{{ color }}">{{ label }}</span>

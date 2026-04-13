@@ -20,7 +20,7 @@
   </head>
 
   <body class="bg-white mifud-body">
-    {% set bp = request.blueprint or '' %}
+    {% set bp = active_tab|default(request.blueprint or '') %}
     {% set is_auth = (current_user is defined) and current_user.is_authenticated %}
     {% set is_admin = is_auth and (current_user.is_admin if current_user is defined else false) %}
 
@@ -43,6 +43,7 @@
                 <div class="fw-bold text-primary">МИФУД</div>
                 <div class="small text-muted">НИЯУ МИФИ</div>
               </div>
+              <img src="{{ url_for('static', filename='img/logo.png') }}" alt="МИФУД" style="width: 40px; height: 40px; object-fit: contain;" />
             </div>
           </div>
 
@@ -53,8 +54,7 @@
                 <a class="nav-link {% if bp == 'menu' %}active{% endif %}" href="/menu">МЕНЮ</a>
               {% else %}
                 <a class="nav-link {% if bp == 'menu' %}active{% endif %}" href="/menu">МЕНЮ</a>
-                <a class="nav-link {% if bp == 'orders' %}active{% endif %}" href="/orders">МОИ ЗАКАЗЫ</a>
-                <a class="nav-link {% if bp == 'reservations' %}active{% endif %}" href="/reservations">МОИ БРОНИ</a>
+                <a class="nav-link {% if bp == 'orders' %}active{% endif %}" href="/orders">ЗАКАЗЫ</a>
               {% endif %}
               <div class="flex-grow-1"></div>
               <a class="nav-link mifud-exit" href="/auth/logout">ВЫЙТИ</a>
