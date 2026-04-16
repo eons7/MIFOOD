@@ -2,365 +2,337 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Doodle Jump — МИФУД</title>
+<title>Doodle Jump: Web & Mobile</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #1a1a2e; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-  canvas { display: block; border-radius: 12px; touch-action: none; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #7f7f7f;
+    font-family: sans-serif;
+    overflow: hidden;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+  }
+  canvas {
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    background: #c8c8c8;
+    max-width: 100%;
+    max-height: 100%;
+    touch-action: none;
+  }
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
+<canvas id="game" width="400" height="600" tabindex="0"></canvas>
 <script>
-const W = 400, H = 600;
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
+(function () {
+  "use strict";
 
-// Масштаб под мобилку
-const scale = Math.min(window.innerWidth / W, window.innerHeight / H, 1);
-canvas.width = W; canvas.height = H;
-canvas.style.width = W * scale + 'px';
-canvas.style.height = H * scale + 'px';
+  // --- 1. НАСТРОЙКИ (идентичны main.py) ---
+  const WIDTH = 400, HEIGHT = 600;
+  const FPS = 60;
+  const GRAVITY = 0.5;
+  const JUMP_FORCE = -15;
+  const FINISH_SCORE = 8000;
 
-// Константы
-const GRAVITY = 0.4;
-const JUMP = -13;
-const PLAT_W = 60, PLAT_H = 10;
-const FINISH = 8000;
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
 
-// Состояние
-let player, platforms, enemies, coins, score, coinCount, gameOver, gameWon, started;
-
-function init() {
-  player = { x: W/2 - 15, y: H - 120, w: 30, h: 30, dy: 0 };
-  platforms = [];
-  enemies = [];
-  coins = [];
-  score = 0;
-  coinCount = 0;
-  gameOver = false;
-  gameWon = false;
-  started = false;
-
-  // Стартовая платформа прямо под игроком
-  platforms.push({ x: W/2 - PLAT_W/2, y: H - 80, w: PLAT_W, h: PLAT_H });
-  for (let i = 1; i < 8; i++) {
-    platforms.push({
-      x: rand(0, W - PLAT_W),
-      y: H - 80 - i * 75,
-      w: PLAT_W, h: PLAT_H
+  // --- Загрузка ресурсов ---
+  const ASSET_BASE = "assets/";
+  function loadImg(name) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = ASSET_BASE + name;
     });
   }
-}
 
-function rand(a, b) { return Math.random() * (b - a) + a; }
+  // --- Ввод ---
+  const keys = { left: false, right: false };
+  let mousePressed = false;
+  let mouseX = 0;
 
-// Сезоны
-function season() {
-  if (score < 2500) return 'autumn';
-  if (score < 5500) return 'winter';
-  return 'spring';
-}
+  function setKey(code, val) {
+    if (code === "ArrowLeft" || code === "KeyA") keys.left = val;
+    if (code === "ArrowRight" || code === "KeyD") keys.right = val;
+  }
+  window.addEventListener("keydown", (e) => { setKey(e.code, true); });
+  window.addEventListener("keyup",   (e) => { setKey(e.code, false); });
 
-const SEASON_BG = { autumn: '#d4813a', winter: '#a8c8e8', spring: '#7ec8a0' };
-const SEASON_PLAT = { autumn: '#8B4513', winter: '#4a90d9', spring: '#2d8a4e' };
-const SEASON_ENEMY = { autumn: '#ff4500', winter: '#00bfff', spring: '#ff69b4' };
+  function getCanvasX(clientX) {
+    const r = canvas.getBoundingClientRect();
+    return (clientX - r.left) * (WIDTH / r.width);
+  }
+  canvas.addEventListener("mousedown", (e) => { mousePressed = true;  mouseX = getCanvasX(e.clientX); canvas.focus(); });
+  canvas.addEventListener("mousemove", (e) => { if (mousePressed) mouseX = getCanvasX(e.clientX); });
+  window.addEventListener("mouseup",   ()  => { mousePressed = false; });
+  canvas.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    mousePressed = true;
+    mouseX = getCanvasX(e.touches[0].clientX);
+  }, { passive: false });
+  canvas.addEventListener("touchmove", (e) => {
+    e.preventDefault();
+    if (e.touches[0]) mouseX = getCanvasX(e.touches[0].clientX);
+  }, { passive: false });
+  canvas.addEventListener("touchend", (e) => { e.preventDefault(); mousePressed = false; }, { passive: false });
 
-function drawBg() {
-  const s = season();
-  // Небо
-  const grad = ctx.createLinearGradient(0, 0, 0, H);
-  if (s === 'autumn') { grad.addColorStop(0, '#1a0a00'); grad.addColorStop(1, '#8b4513'); }
-  else if (s === 'winter') { grad.addColorStop(0, '#000033'); grad.addColorStop(1, '#4a90d9'); }
-  else { grad.addColorStop(0, '#001a00'); grad.addColorStop(1, '#228b22'); }
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
+  // --- Утилиты ---
+  function randInt(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+  function rectsCollide(a, b) {
+    return a.x < b.x + b.w && a.x + a.w > b.x &&
+           a.y < b.y + b.h && a.y + a.h > b.y;
+  }
 
-  // Звёзды/снежинки/цветы — декор
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  const seed = Math.floor(score / 100);
-  for (let i = 0; i < 20; i++) {
-    const sx = ((seed * 37 + i * 71) % W);
-    const sy = ((seed * 13 + i * 53) % H);
-    ctx.beginPath();
-    if (s === 'winter') {
-      ctx.arc(sx, sy, 2, 0, Math.PI * 2);
-    } else {
-      ctx.arc(sx, sy, 1, 0, Math.PI * 2);
+  // --- Классы ---
+  function Player() {
+    this.x = 185; this.y = 450; this.w = 30; this.h = 30;
+    this.dy = 0;
+  }
+  Player.prototype.rect = function () { return { x: this.x, y: this.y, w: this.w, h: this.h }; };
+  Player.prototype.move = function () {
+    this.dy += GRAVITY;
+    this.y += this.dy;
+
+    const mouseLeft  = mousePressed && mouseX <  WIDTH / 2;
+    const mouseRight = mousePressed && mouseX >= WIDTH / 2;
+    if (keys.left  || mouseLeft)  this.x -= 7;
+    if (keys.right || mouseRight) this.x += 7;
+
+    // Оригинал: if self.rect.left > WIDTH: self.rect.right = 0
+    if (this.x > WIDTH) this.x = -this.w;
+    if (this.x + this.w < 0) this.x = WIDTH;
+  };
+
+  function Enemy(y, season) {
+    this.x = randInt(0, WIDTH - 40); this.y = y; this.w = 40; this.h = 40;
+    this.type = season;
+    this.speed = randInt(2, 4);
+    this.direction = Math.random() > 0.5 ? 1 : -1;
+  }
+  Enemy.prototype.update = function () {
+    this.x += this.speed * this.direction;
+    if (this.x + this.w >= WIDTH || this.x <= 0) this.direction *= -1;
+  };
+  Enemy.prototype.rect = function () { return { x: this.x, y: this.y, w: this.w, h: this.h }; };
+
+  function Coin(px, py) {
+    this.x = px + 7; this.y = py - 50; this.w = 45; this.h = 45;
+  }
+  Coin.prototype.rect = function () { return { x: this.x, y: this.y, w: this.w, h: this.h }; };
+
+  // --- Запуск ---
+  Promise.all([
+    loadImg("autumn.png"),
+    loadImg("winter.png"),
+    loadImg("spring.png"),
+    loadImg("doodler.png"),
+    loadImg("coin.png"),
+    loadImg("enemy_autumn.png"),
+    loadImg("enemy_winter.png"),
+    loadImg("enemy_spring.png"),
+  ]).then(([bgAutumn, bgWinter, bgSpring, doodleImg, coinImg, enA, enW, enS]) => {
+    const enemyImgs = { autumn: enA, winter: enW, spring: enS };
+
+    let player = new Player();
+    const startPlatform = { x: 170, y: 530, w: 60, h: 10 };
+    let platforms = [startPlatform];
+    for (let i = 1; i < 7; i++) {
+      platforms.push({ x: randInt(0, WIDTH - 60), y: i * 80, w: 60, h: 10 });
     }
-    ctx.fill();
-  }
-}
+    let enemies = [], coins = [];
+    let score = 0, coinCount = 0;
+    let gameWon = false, running = true;
 
-function drawPlayer() {
-  // Тело
-  ctx.fillStyle = '#f5c518';
-  ctx.beginPath();
-  ctx.ellipse(player.x + 15, player.y + 18, 13, 14, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Глаза
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.arc(player.x + 10, player.y + 14, 4, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(player.x + 20, player.y + 14, 4, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#333';
-  ctx.beginPath(); ctx.arc(player.x + 11, player.y + 14, 2, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(player.x + 21, player.y + 14, 2, 0, Math.PI * 2); ctx.fill();
-  // Нос
-  ctx.fillStyle = '#ff6600';
-  ctx.beginPath(); ctx.arc(player.x + 15, player.y + 19, 2.5, 0, Math.PI * 2); ctx.fill();
-}
+    function reset() {
+      player = new Player();
+      score = 0;
+      enemies = [];
+      coins = [];
+    }
 
-function drawPlatform(p) {
-  const s = season();
-  ctx.fillStyle = SEASON_PLAT[s];
-  ctx.beginPath();
-  ctx.roundRect(p.x, p.y, p.w, p.h, 5);
-  ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.3)';
-  ctx.fillRect(p.x + 4, p.y + 2, p.w - 8, 3);
-}
+    const frameInterval = 1000 / FPS;
+    let last = performance.now();
+    let acc = 0;
 
-function drawEnemy(e) {
-  const s = season();
-  ctx.fillStyle = SEASON_ENEMY[s];
-  ctx.beginPath();
-  ctx.arc(e.x + 20, e.y + 20, 18, 0, Math.PI * 2);
-  ctx.fill();
-  // Глаза злодея
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.arc(e.x + 13, e.y + 16, 5, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(e.x + 27, e.y + 16, 5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#f00';
-  ctx.beginPath(); ctx.arc(e.x + 14, e.y + 16, 2.5, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(e.x + 28, e.y + 16, 2.5, 0, Math.PI * 2); ctx.fill();
-}
-
-function drawCoin(c) {
-  ctx.fillStyle = '#ffd700';
-  ctx.beginPath();
-  ctx.arc(c.x + 12, c.y + 12, 11, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#b8860b';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.fillStyle = '#b8860b';
-  ctx.font = 'bold 13px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('₽', c.x + 12, c.y + 17);
-}
-
-function drawHUD() {
-  const s = season();
-  const txtColor = s === 'winter' ? '#fff' : '#fff';
-  ctx.fillStyle = 'rgba(0,0,0,0.45)';
-  ctx.beginPath(); ctx.roundRect(8, 8, 140, 56, 8); ctx.fill();
-  ctx.fillStyle = txtColor;
-  ctx.font = 'bold 15px sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('Высота: ' + Math.floor(score), 16, 28);
-  ctx.fillStyle = '#ffd700';
-  ctx.fillText('Монеты: ' + coinCount, 16, 50);
-
-  // Прогресс-бар
-  ctx.fillStyle = 'rgba(0,0,0,0.45)';
-  ctx.beginPath(); ctx.roundRect(W - 18, 20, 10, H - 40, 5); ctx.fill();
-  const prog = Math.min(score / FINISH, 1);
-  const barH = (H - 40) * prog;
-  ctx.fillStyle = '#4caf50';
-  ctx.beginPath(); ctx.roundRect(W - 18, H - 20 - barH, 10, barH, 5); ctx.fill();
-}
-
-function drawStart() {
-  ctx.fillStyle = 'rgba(0,0,0,0.7)';
-  ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 28px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('DOODLE JUMP', W/2, H/2 - 60);
-  ctx.font = '16px sans-serif';
-  ctx.fillStyle = '#ccc';
-  ctx.fillText('Нажми или кликни чтобы начать', W/2, H/2 - 20);
-  ctx.fillText('← → для движения', W/2, H/2 + 10);
-  ctx.fillStyle = '#ffd700';
-  ctx.font = 'bold 16px sans-serif';
-  ctx.fillText('Доберись до высоты 8000!', W/2, H/2 + 50);
-}
-
-function drawGameOver() {
-  ctx.fillStyle = 'rgba(0,0,0,0.75)';
-  ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#ff4444';
-  ctx.font = 'bold 32px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('УПАЛ!', W/2, H/2 - 40);
-  ctx.fillStyle = '#fff';
-  ctx.font = '18px sans-serif';
-  ctx.fillText('Высота: ' + Math.floor(score), W/2, H/2);
-  ctx.fillText('Монеты: ' + coinCount, W/2, H/2 + 30);
-  ctx.fillStyle = '#4caf50';
-  ctx.font = 'bold 20px sans-serif';
-  ctx.fillText('Нажми чтобы начать снова', W/2, H/2 + 80);
-}
-
-function drawWin() {
-  ctx.fillStyle = 'rgba(0,0,0,0.75)';
-  ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#ffd700';
-  ctx.font = 'bold 30px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('ПОБЕДА!', W/2, H/2 - 60);
-  ctx.fillStyle = '#fff';
-  ctx.font = '18px sans-serif';
-  ctx.fillText('Все сезоны пройдены!', W/2, H/2 - 20);
-  ctx.fillText('Монеты собраны: ' + coinCount, W/2, H/2 + 15);
-  ctx.fillStyle = '#4caf50';
-  ctx.font = 'bold 20px sans-serif';
-  ctx.fillText('Нажми чтобы сыграть снова', W/2, H/2 + 70);
-}
-
-// Управление
-const keys = {};
-document.addEventListener('keydown', e => { keys[e.key] = true; });
-document.addEventListener('keyup', e => { keys[e.key] = false; });
-
-// Тач-управление
-let touchX = null;
-canvas.addEventListener('touchstart', e => {
-  e.preventDefault();
-  if (!started || gameOver || gameWon) { handleStart(); return; }
-  touchX = e.touches[0].clientX;
-}, { passive: false });
-canvas.addEventListener('touchmove', e => {
-  e.preventDefault();
-  touchX = e.touches[0].clientX;
-}, { passive: false });
-canvas.addEventListener('touchend', () => { touchX = null; });
-
-canvas.addEventListener('click', handleStart);
-
-function handleStart() {
-  if (!started) { started = true; return; }
-  if (gameOver || gameWon) { init(); started = true; }
-}
-
-function update() {
-  if (!started || gameOver || gameWon) return;
-
-  // Движение
-  let speed = 5;
-  const centerX = canvas.getBoundingClientRect().left + canvas.clientWidth / 2;
-  if (keys['ArrowLeft'] || keys['a']) player.x -= speed;
-  else if (keys['ArrowRight'] || keys['d']) player.x += speed;
-  else if (touchX !== null) {
-    if (touchX < centerX) player.x -= speed;
-    else player.x += speed;
-  }
-
-  // Экран-обёртка
-  if (player.x + player.w < 0) player.x = W;
-  if (player.x > W) player.x = -player.w;
-
-  player.dy += GRAVITY;
-  player.y += player.dy;
-
-  // Коллизия с платформами
-  if (player.dy > 0) {
-    for (const p of platforms) {
-      if (
-        player.x + player.w > p.x + 4 &&
-        player.x < p.x + p.w - 4 &&
-        player.y + player.h > p.y &&
-        player.y + player.h < p.y + p.h + 12
-      ) {
-        player.dy = JUMP;
-        break;
+    function loop(now) {
+      if (!running) return;
+      const delta = now - last;
+      last = now;
+      acc += delta;
+      while (acc >= frameInterval) {
+        step();
+        acc -= frameInterval;
       }
+      draw();
+      requestAnimationFrame(loop);
     }
-  }
 
-  // Прокрутка
-  if (player.y < H / 2) {
-    const diff = H / 2 - player.y;
-    player.y = H / 2;
-    score += diff;
-    for (const p of platforms) p.y += diff;
-    for (const e of enemies) e.y += diff;
-    for (const c of coins) c.y += diff;
-  }
+    function step() {
+      if (gameWon) return;
 
-  // Удаление вышедших за экран платформ и генерация новых
-  for (let i = platforms.length - 1; i >= 0; i--) {
-    if (platforms[i].y > H) {
-      platforms.splice(i, 1);
-      if (score < FINISH) {
-        const newP = { x: rand(0, W - PLAT_W), y: -10, w: PLAT_W, h: PLAT_H };
-        platforms.push(newP);
-        if (Math.random() < 0.12 && enemies.length < 5) {
-          enemies.push({ x: rand(0, W-40), y: -50, w: 40, h: 40, speed: rand(1.5, 3.5), dir: Math.random() > 0.5 ? 1 : -1 });
-        } else if (Math.random() < 0.18) {
-          coins.push({ x: newP.x, y: newP.y - 50, w: 24, h: 24 });
+      player.move();
+
+      // Коллизия с платформами (только при падении)
+      const pr = player.rect();
+      for (const p of platforms) {
+        if (rectsCollide(pr, p) && player.dy > 0) {
+          if (pr.y + pr.h <= p.y + p.h + 10) {
+            player.dy = JUMP_FORCE;
+          }
         }
       }
+
+      // Сбор монет
+      const pr2 = player.rect();
+      for (let i = coins.length - 1; i >= 0; i--) {
+        if (rectsCollide(pr2, coins[i].rect())) {
+          coinCount++;
+          coins.splice(i, 1);
+        }
+      }
+
+      // Враги: движение + столкновение
+      for (const en of enemies) en.update();
+      for (const en of enemies) {
+        if (rectsCollide(player.rect(), en.rect())) {
+          reset();
+          break;
+        }
+      }
+
+      // Скролл камеры вверх
+      if (player.y < 200) {
+        const diff = 200 - player.y;
+        player.y = 200;
+        score += diff;
+
+        for (const p of platforms) {
+          p.y += diff;
+          if (p.y > HEIGHT) {
+            if (score < FINISH_SCORE) {
+              p.y = 0;
+              p.x = randInt(0, WIDTH - 60);
+              const r = Math.random();
+              if (r < 0.10) {
+                enemies.push(new Enemy(p.y - 40, currentSeason()));
+              } else if (r < 0.20) {
+                // оригинал: elif random.random() < 0.20 — независимый roll,
+                // но в pygame коде это два отдельных random.random() — здесь
+                // используем один `r`, чтобы не было случая "враг И монета".
+                coins.push(new Coin(p.x, p.y));
+              }
+            } else {
+              p.y = -100;
+            }
+          }
+        }
+        for (const en of enemies) en.y += diff;
+        for (const c of coins)   c.y += diff;
+        enemies = enemies.filter((en) => en.y < HEIGHT + 100);
+        coins   = coins.filter((c) => c.y < HEIGHT + 100);
+      }
+
+      // Победа
+      if (score >= FINISH_SCORE && platforms.filter((p) => p.y > 0).length === 0) {
+        gameWon = true;
+      }
+      // Падение вниз = reset
+      if (player.y > HEIGHT) reset();
     }
-  }
 
-  // Враги
-  for (const e of enemies) {
-    e.x += e.speed * e.dir;
-    if (e.x <= 0 || e.x + e.w >= W) e.dir *= -1;
-    if (
-      player.x + 4 < e.x + e.w - 4 &&
-      player.x + player.w - 4 > e.x + 4 &&
-      player.y + 4 < e.y + e.h - 4 &&
-      player.y + player.h - 4 > e.y + 4
-    ) {
-      gameOver = true;
+    function currentSeason() {
+      if (score < 2500)  return "autumn";
+      if (score < 5500)  return "winter";
+      return "spring";
     }
-  }
-  enemies = enemies.filter(e => e.y < H + 100);
 
-  // Монеты
-  for (let i = coins.length - 1; i >= 0; i--) {
-    const c = coins[i];
-    if (
-      player.x < c.x + c.w && player.x + player.w > c.x &&
-      player.y < c.y + c.h && player.y + player.h > c.y
-    ) {
-      coinCount++;
-      coins.splice(i, 1);
+    function currentBg() {
+      if (score < 2500) return bgAutumn;
+      if (score < 5500) return bgWinter;
+      return bgSpring;
     }
-  }
-  coins = coins.filter(c => c.y < H + 50);
 
-  // Падение
-  if (player.y > H + 50) gameOver = true;
+    function txtColor() {
+      if (score < 2500) return "rgb(255,255,255)";
+      if (score < 5500) return "rgb(0,0,100)";
+      return "rgb(0,80,0)";
+    }
 
-  // Победа
-  if (score >= FINISH) gameWon = true;
-}
+    function drawText(text, x, y, color) {
+      ctx.fillStyle = color;
+      ctx.font = "bold 24px sans-serif";
+      ctx.textBaseline = "top";
+      ctx.fillText(text, x, y);
+    }
 
-function draw() {
-  ctx.clearRect(0, 0, W, H);
-  drawBg();
-  for (const p of platforms) drawPlatform(p);
-  for (const c of coins) drawCoin(c);
-  for (const e of enemies) drawEnemy(e);
-  drawPlayer();
-  if (started && !gameOver && !gameWon) drawHUD();
-  if (!started) drawStart();
-  if (gameOver) drawGameOver();
-  if (gameWon) drawWin();
-}
+    function draw() {
+      const bg = currentBg();
+      if (bg) {
+        ctx.drawImage(bg, 0, 0, WIDTH, HEIGHT);
+      } else {
+        ctx.fillStyle = "rgb(200,200,200)";
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      }
 
-function loop() {
-  update();
-  draw();
-  requestAnimationFrame(loop);
-}
+      // Платформы
+      ctx.fillStyle = "rgb(120,120,120)";
+      for (const p of platforms) ctx.fillRect(p.x, p.y, p.w, p.h);
 
-init();
-loop();
+      // Монеты
+      for (const c of coins) {
+        if (coinImg) ctx.drawImage(coinImg, c.x, c.y, c.w, c.h);
+        else {
+          ctx.fillStyle = "rgb(255,215,0)";
+          ctx.beginPath();
+          ctx.arc(c.x + c.w / 2, c.y + c.h / 2, 20, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Враги
+      for (const en of enemies) {
+        const img = enemyImgs[en.type];
+        if (img) ctx.drawImage(img, en.x, en.y, en.w, en.h);
+        else {
+          ctx.fillStyle = "rgb(200,0,0)";
+          ctx.beginPath();
+          ctx.arc(en.x + en.w / 2, en.y + en.h / 2, 20, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Игрок
+      if (doodleImg) ctx.drawImage(doodleImg, player.x, player.y, player.w, player.h);
+      else {
+        ctx.fillStyle = "rgb(0,200,0)";
+        ctx.fillRect(player.x, player.y, player.w, player.h);
+      }
+
+      // HUD
+      drawText("Height: " + Math.floor(score), 15, 15, txtColor());
+      drawText("Coins: " + coinCount, 15, 45, "rgb(255,215,0)");
+
+      if (gameWon) {
+        drawText("WIN! ALL SEASONS DONE!", WIDTH / 2 - 140, HEIGHT / 2, "rgb(255,0,0)");
+      }
+    }
+
+    canvas.focus();
+    requestAnimationFrame((t) => { last = t; loop(t); });
+  });
+})();
 </script>
 </body>
 </html>
