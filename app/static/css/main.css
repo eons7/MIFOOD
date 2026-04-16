@@ -478,10 +478,20 @@ body {
   display: none;
 }
 
-.mifud-game-iframe {
+.mifud-game-wrap {
   width: 100%;
   height: 620px;
-  border: none;
+  overflow: hidden;
   border-radius: 12px;
+  position: relative;
+}
+
+.mifud-game-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
   display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
