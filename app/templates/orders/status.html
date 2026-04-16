@@ -52,10 +52,18 @@
       </table>
     </div>
 
-    {# Кнопка оплаты #}
-    <div class="d-grid gap-2 mb-3">
-      <a href="#" class="btn mifud-btn-primary btn-lg">ОПЛАТИТЬ ОНЛАЙН →</a>
-    </div>
+    {# Мини-игра #}
+    {% if order.status in ['pending', 'confirmed', 'ready'] %}
+    <details class="mifud-game-block mb-4">
+      <summary class="btn mifud-btn-primary w-100">ИГРАТЬ ▶</summary>
+      <iframe
+        src="{{ url_for('static', filename='game/index-1.html') }}"
+        class="mifud-game-iframe mt-2"
+        scrolling="no"
+        allowfullscreen
+      ></iframe>
+    </details>
+    {% endif %}
 
     {# Ссылки: все заказы / отменить #}
     <div class="d-flex justify-content-between mb-4">

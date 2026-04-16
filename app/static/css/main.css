@@ -466,3 +466,22 @@ body {
   font-weight: 800;
   border-bottom: 0;
 }
+
+/* Мини-игра */
+.mifud-game-block summary {
+  list-style: none;
+  cursor: pointer;
+  display: block;
+}
+
+.mifud-game-block summary::-webkit-details-marker {
+  display: none;
+}
+
+.mifud-game-iframe {
+  width: 100%;
+  height: 620px;
+  border: none;
+  border-radius: 12px;
+  display: block;
+}
