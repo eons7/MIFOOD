@@ -1,43 +1,51 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for
-from flask_login import current_user, login_user, logout_user
+from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask_login import login_user, logout_user, login_required, current_user
+from app import db
+from app.models import User
 
-from app import db  # SQLAlchemy instance
-from app.models.user import User
+auth_bp = Blueprint('auth', __name__)
 
-from . import auth_bp
-
-
-@auth_bp.get("/login")
+@auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    return render_template("auth/login.html")
-
-
-@auth_bp.post("/login")
-def login_post():
-    # На текущем этапе проект только “каркас”. Реальную проверку пароля
-    # добавим позже, когда формы будут реализованы.
-    flash("Вход пока не реализован. Перейдите к регистрации.", "warning")
-    return redirect(url_for("auth.login"))
-
-
-@auth_bp.get("/register")
-def register():
-    return render_template("auth/register.html")
-
-
-@auth_bp.post("/register")
-def register_post():
-    # Заглушка: форма регистрации пока не заполнена.
-    flash("Регистрация пока не реализована. Эта страница — заглушка.", "warning")
-    return redirect(url_for("auth.register"))
-
-
-@auth_bp.get("/logout")
-def logout():
     if current_user.is_authenticated:
-        logout_user()
-    flash("Вы вышли из аккаунта.", "info")
-    return redirect(url_for("home"))
+        return redirect(url_for('menu.index'))
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        user = User.query.filter_by(email=email).first()
+        if user is None or not user.check_password(password):
+            flash('Неверный email или пароль')
+            return redirect(url_for('auth.login'))
+        login_user(user)
+        return redirect(url_for('menu.index'))
+    return render_template('auth/login.html')
 
+@auth_bp.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('menu.index'))
+    if request.method == 'POST':
+        name = request.form.get('name')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        password2 = request.form.get('password2')
+        if password != password2:
+            flash('Пароли не совпадают')
+            return redirect(url_for('auth.register'))
+        if User.query.filter_by(email=email).first() is not None:
+            flash('Email уже занят')
+            return redirect(url_for('auth.register'))
+        user = User(name=name, email=email)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        flash('Регистрация успешна! Войдите в систему.')
+        return redirect(url_for('auth.login'))
+    return render_template('auth/register.html')
 
-
+@auth_bp.route('/logout', methods=['GET'])
+@login_required
+def logout():
+    logout_user()
+    flash('Вы вышли из системы.')
+    return redirect(url_for('auth.login'))
