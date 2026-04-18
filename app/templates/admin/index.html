@@ -37,7 +37,7 @@
               <td>{{ order.pickup_time.strftime('%H:%M') }}</td>
               <td class="small">
                 {% for item in order.order_items %}
-                  {{ item.menu_item.name }}{% if item.quantity > 1 %}&nbsp;&times;&nbsp;{{ item.quantity }}{% endif %}{% if not loop.last %},<br>{% endif %}
+                  {{ item.menu_item.name | pretty_name }}{% if item.quantity > 1 %}&nbsp;&times;&nbsp;{{ item.quantity }}{% endif %}{% if not loop.last %},<br>{% endif %}
                 {% endfor %}
               </td>
               <td class="fw-bold">{{ order.total_price|int }} ₽</td>

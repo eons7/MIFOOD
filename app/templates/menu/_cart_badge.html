@@ -1,0 +1,11 @@
+{# HTMX-partial: значок корзины (сумма + кол-во) #}
+<span class="fw-800 mifud-title" id="cart-badge">
+  {{ (cart_total|default(0))|int }} ₽
+  {% if (cart_count|default(0)) > 0 %}
+    <span class="badge bg-primary ms-1">{{ cart_count }}</span>
+  {% endif %}
+</span>
+{# Out-of-band: обновляем счётчик в карточке конкретного блюда #}
+{% if item_id is defined %}
+<span class="mifud-stepper-value" id="qty-{{ item_id }}" hx-swap-oob="true">{{ item_qty|default(0) }}</span>
+{% endif %}

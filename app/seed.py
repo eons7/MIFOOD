@@ -1,45 +1,49 @@
-from app import create_app          # Функция для создания приложения Flask
-from app.extensions import db      # Объект базы данных SQLAlchemy
-from app.models.menu import Category, MenuItem  # Модели категорий и блюд
-from app.models.user import User   # Модель пользователя (если нужна)
+import os
+
+from app import create_app
+from app.extensions import db
+from app.models.menu import Category, MenuItem
+from app.models.user import User   # noqa: F401
 
 # ВАЖНО: импортируем все модели, чтобы SQLAlchemy успел зарегистрировать имена
-# до конфигурации relationship'ов (например, MenuItem -> OrderItem).
+# до конфигурации relationship'ов.
 from app.models.order import Order, OrderItem  # noqa: F401
 from app.models.reservation import Reservation, Table  # noqa: F401
 
 
-# Создаем экземпляр приложения
+UPLOADS_DIR = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
+IMAGE_EXTS = ('.jpg', '.jpeg', '.png', '.webp')
+
+
+def find_image(slug: str) -> str | None:
+    """Ищет файл uploads/<slug>.<ext> и возвращает URL-путь для шаблона."""
+    if not slug:
+        return None
+    for ext in IMAGE_EXTS:
+        filename = slug + ext
+        if os.path.isfile(os.path.join(UPLOADS_DIR, filename)):
+            return '/static/uploads/' + filename
+    return None
+
+
 app = create_app()
 
 
 with app.app_context():
-    # Создаем таблицы перед первыми запросами.
-    # Это нужно, чтобы не падать на ошибке вида `no such table: categories`.
     db.create_all()
 
-    # ========== ЧАСТЬ 1: ПРОВЕРКА И СОЗДАНИЕ КАТЕГОРИЙ ==========
-    
-
+    # ========== КАТЕГОРИИ ==========
     first_courses = Category.query.filter_by(name='Первые блюда').first()
-    
-    # Ищем категорию "Напитки"
     drinks = Category.query.filter_by(name='Напитки').first()
     sandwiches = Category.query.filter_by(name='Сэндвичи').first()
-    
-  
+
     if not first_courses:
-        # Создаем новый объект категории
         first_courses = Category(name='Первые блюда')
-        # Добавляем объект в сессию базы данных (в очередь на добавление)
         db.session.add(first_courses)
         print('✅ Создана категория: Первые блюда')
-    
-  
+
     if not drinks:
-        # Создаем новую категорию
         drinks = Category(name='Напитки')
-        # Добавляем в сессию
         db.session.add(drinks)
         print('✅ Создана категория: Напитки')
 
@@ -47,135 +51,136 @@ with app.app_context():
         sandwiches = Category(name='Сэндвичи')
         db.session.add(sandwiches)
         print('✅ Создана категория: Сэндвичи')
-    
+
+    extras = Category.query.filter_by(name='Добавки').first()
+    if not extras:
+        extras = Category(name='Добавки')
+        db.session.add(extras)
+        print('✅ Создана категория: Добавки')
 
     db.session.commit()
-    print('📌 Категории сохранены в базе данных')
-    
+    print('📌 Категории сохранены')
 
+    # Миграция: перенос «Шот эспрессо», «Сироп», «Альтернативное молоко»
+    # из «Напитки» в «Добавки»
+    extras_names = ('Шот эспрессо', 'Сироп', 'Альтернативное молоко')
+    moved = 0
+    for n in extras_names:
+        it = MenuItem.query.filter_by(name=n, category_id=drinks.id).first()
+        if it:
+            it.category_id = extras.id
+            moved += 1
+    if moved:
+        db.session.commit()
+        print(f'🔀 Перенесено в «Добавки»: {moved}')
+
+    # ========== СТОЛЫ ==========
+    tables_spec = [
+        (1, 2), (2, 2), (3, 4), (4, 4), (5, 4), (6, 6), (7, 6), (8, 8),
+    ]
+    tables_added = 0
+    for number, seats in tables_spec:
+        if not Table.query.filter_by(number=number).first():
+            db.session.add(Table(number=number, seats=seats, is_active=True))
+            tables_added += 1
+    db.session.commit()
+    print(f'🪑 Столы: добавлено {tables_added}, всего {Table.query.count()}')
+
+    # ========== БЛЮДА ==========
+    # slug — это имя файла без расширения в app/static/uploads/
+    # Положи файл <slug>.jpg (или .png / .webp) — seed подхватит автоматически.
     new_products = [
         # Первые блюда
-        {'name': 'Солянка', 'price': 150.0, 'category_name': 'Первые блюда'},
-        {'name': 'Уха', 'price': 180.0, 'category_name': 'Первые блюда'},
-        {'name': 'Щи', 'price': 110.0, 'category_name': 'Первые блюда'},
-        {'name': 'Лапша куриная', 'price': 130.0, 'category_name': 'Первые блюда'},
-        {'name': 'Грибной суп', 'price': 140.0, 'category_name': 'Первые блюда'},
-        
-        # Напитки 
-        {'name': 'Эспрессо_S', 'price': 100.0, 'category_name': 'Напитки'},
-        {'name': 'Американо_S', 'price': 110.0, 'category_name': 'Напитки'},
-        {'name': 'Американо_M', 'price': 130.0, 'category_name': 'Напитки'},
-        {'name': 'Капучино_M', 'price': 170.0, 'category_name': 'Напитки'},
-        {'name': 'Капучино_L', 'price': 210.0, 'category_name': 'Напитки'},
-        {'name': 'Флэт уайт_S', 'price': 150.0, 'category_name': 'Напитки'},
-        {'name': 'Флэт уайт_M', 'price': 190.0, 'category_name': 'Напитки'},
-        {'name': 'Моккачино_M', 'price': 180.0, 'category_name': 'Напитки'},
-        {'name': 'Моккачино_L', 'price': 210.0, 'category_name': 'Напитки'},
-        {'name': 'Латте_M', 'price': 170.0, 'category_name': 'Напитки'},
-        {'name': 'Латте_L', 'price': 210.0, 'category_name': 'Напитки'},
-        {'name': 'Раф_M', 'price': 220.0, 'category_name': 'Напитки'},
-        {'name': 'Раф_L', 'price': 260.0, 'category_name': 'Напитки'},
-        {'name': 'Какао_M', 'price': 130.0, 'category_name': 'Напитки'},
-        {'name': 'Какао_L', 'price': 180.0, 'category_name': 'Напитки'},
-        {'name': 'Фруктовый чай_M', 'price': 130.0, 'category_name': 'Напитки'},
-        {'name': 'Фруктовый чай_L', 'price': 160.0, 'category_name': 'Напитки'},
-        {'name': 'Бамбл_M', 'price': 210.0, 'category_name': 'Напитки'},
-        {'name': 'Эспрессо тоник_M', 'price': 210.0, 'category_name': 'Напитки'},
-        {'name': 'Айс Латте_M', 'price': 210.0, 'category_name': 'Напитки'},
-        {'name': 'Фруктовый чай холодный_M', 'price': 160.0, 'category_name': 'Напитки'},
-        {'name': 'Шот эспрессо', 'price': 35.0, 'category_name': 'Напитки'},
-        {'name': 'Сироп', 'price': 30.0, 'category_name': 'Напитки'},
-        {'name': 'Альтернативное молоко', 'price': 50.0, 'category_name': 'Напитки'},
-    
+        {'name': 'Солянка',        'price': 150.0, 'category_name': 'Первые блюда', 'slug': 'solyanka'},
+        {'name': 'Уха',            'price': 180.0, 'category_name': 'Первые блюда', 'slug': 'uha'},
+        {'name': 'Щи',             'price': 110.0, 'category_name': 'Первые блюда', 'slug': 'shchi'},
+        {'name': 'Лапша куриная',  'price': 130.0, 'category_name': 'Первые блюда', 'slug': 'lapsha_kurinaya'},
+        {'name': 'Грибной суп',    'price': 140.0, 'category_name': 'Первые блюда', 'slug': 'gribnoy_sup'},
+
+        # Напитки
+        {'name': 'Эспрессо_S',                 'price': 100.0, 'category_name': 'Напитки', 'slug': 'espresso_s'},
+        {'name': 'Американо_S',                'price': 110.0, 'category_name': 'Напитки', 'slug': 'americano_s'},
+        {'name': 'Американо_M',                'price': 130.0, 'category_name': 'Напитки', 'slug': 'americano_m'},
+        {'name': 'Капучино_M',                 'price': 170.0, 'category_name': 'Напитки', 'slug': 'cappuccino_m'},
+        {'name': 'Капучино_L',                 'price': 210.0, 'category_name': 'Напитки', 'slug': 'cappuccino_l'},
+        {'name': 'Флэт уайт_S',                'price': 150.0, 'category_name': 'Напитки', 'slug': 'flat_white_s'},
+        {'name': 'Флэт уайт_M',                'price': 190.0, 'category_name': 'Напитки', 'slug': 'flat_white_m'},
+        {'name': 'Моккачино_M',                'price': 180.0, 'category_name': 'Напитки', 'slug': 'mocha_m'},
+        {'name': 'Моккачино_L',                'price': 210.0, 'category_name': 'Напитки', 'slug': 'mocha_l'},
+        {'name': 'Латте_M',                    'price': 170.0, 'category_name': 'Напитки', 'slug': 'latte_m'},
+        {'name': 'Латте_L',                    'price': 210.0, 'category_name': 'Напитки', 'slug': 'latte_l'},
+        {'name': 'Раф_M',                      'price': 220.0, 'category_name': 'Напитки', 'slug': 'raf_m'},
+        {'name': 'Раф_L',                      'price': 260.0, 'category_name': 'Напитки', 'slug': 'raf_l'},
+        {'name': 'Какао_M',                    'price': 130.0, 'category_name': 'Напитки', 'slug': 'cocoa_m'},
+        {'name': 'Какао_L',                    'price': 180.0, 'category_name': 'Напитки', 'slug': 'cocoa_l'},
+        {'name': 'Фруктовый чай_M',            'price': 130.0, 'category_name': 'Напитки', 'slug': 'fruit_tea_m'},
+        {'name': 'Фруктовый чай_L',            'price': 160.0, 'category_name': 'Напитки', 'slug': 'fruit_tea_l'},
+        {'name': 'Бамбл_M',                    'price': 210.0, 'category_name': 'Напитки', 'slug': 'bumble_m'},
+        {'name': 'Эспрессо тоник_M',           'price': 210.0, 'category_name': 'Напитки', 'slug': 'espresso_tonic_m'},
+        {'name': 'Айс Латте_M',                'price': 210.0, 'category_name': 'Напитки', 'slug': 'ice_latte_m'},
+        {'name': 'Фруктовый чай холодный_M',   'price': 160.0, 'category_name': 'Напитки', 'slug': 'fruit_tea_cold_m'},
+        {'name': 'Шот эспрессо',               'price': 35.0,  'category_name': 'Добавки', 'slug': 'espresso_shot'},
+        {'name': 'Сироп',                      'price': 30.0,  'category_name': 'Добавки', 'slug': 'syrup'},
+        {'name': 'Альтернативное молоко',      'price': 50.0,  'category_name': 'Добавки', 'slug': 'alt_milk'},
 
         # Сэндвичи
-        {'name': 'Сэндвич с ветчиной и сыром в белом хлебе', 'price': 180.0, 'category_name': 'Сэндвичи'},
-        {'name': 'Сэндвич с ветчиной и сыром в чёрном хлебе', 'price': 180.0, 'category_name': 'Сэндвичи'},
-        {'name': 'Сэндвич с курицей в белом хлебе', 'price': 180.0, 'category_name': 'Сэндвичи'},
-        {'name': 'Сэндвич с курицей в чёрном хлебе', 'price': 180.0, 'category_name': 'Сэндвичи'},
-        {'name': 'Сэндвич с индейкой в белом хлебе', 'price': 180.0, 'category_name': 'Сэндвичи'},
-        {'name': 'Сэндвич с индейкой в чёрном хлебе', 'price': 180.0, 'category_name': 'Сэндвичи'},
-        {'name': 'Сэндвич с ростбифом', 'price': 180.0, 'category_name': 'Сэндвичи'},
-        {'name': 'Шаурма в пите', 'price': 180.0, 'category_name': 'Сэндвичи'},
-        {'name': 'Сэндвич с ростифом в пите', 'price': 180.0, 'category_name': 'Сэндвичи'},
-        {'name': 'Шаурма', 'price': 110.0, 'category_name': 'Сэндвичи'},
+        {'name': 'Сэндвич с ветчиной и сыром в белом хлебе',  'price': 180.0, 'category_name': 'Сэндвичи', 'slug': 'sandwich_ham_cheese_white'},
+        {'name': 'Сэндвич с ветчиной и сыром в чёрном хлебе', 'price': 180.0, 'category_name': 'Сэндвичи', 'slug': 'sandwich_ham_cheese_black'},
+        {'name': 'Сэндвич с курицей в белом хлебе',           'price': 180.0, 'category_name': 'Сэндвичи', 'slug': 'sandwich_chicken_white'},
+        {'name': 'Сэндвич с курицей в чёрном хлебе',          'price': 180.0, 'category_name': 'Сэндвичи', 'slug': 'sandwich_chicken_black'},
+        {'name': 'Сэндвич с индейкой в белом хлебе',          'price': 180.0, 'category_name': 'Сэндвичи', 'slug': 'sandwich_turkey_white'},
+        {'name': 'Сэндвич с индейкой в чёрном хлебе',         'price': 180.0, 'category_name': 'Сэндвичи', 'slug': 'sandwich_turkey_black'},
+        {'name': 'Сэндвич с ростбифом',                       'price': 180.0, 'category_name': 'Сэндвичи', 'slug': 'sandwich_roastbeef'},
+        {'name': 'Шаурма в пите',                             'price': 180.0, 'category_name': 'Сэндвичи', 'slug': 'shawarma_pita'},
+        {'name': 'Сэндвич с ростбифом в пите',                'price': 180.0, 'category_name': 'Сэндвичи', 'slug': 'sandwich_roastbeef_pita'},
+        {'name': 'Шаурма',                                    'price': 110.0, 'category_name': 'Сэндвичи', 'slug': 'shawarma'},
     ]
-    
 
     added_count = 0
-    
-    # Перебираем каждый продукт из списка
+    updated_image_count = 0
+    missing_images = []
+
     for product in new_products:
-     
         category = Category.query.filter_by(name=product['category_name']).first()
-        
-        # Проверяем, существует ли уже такой продукт в этой категории
-        # Чтобы не добавлять дубликаты
+        image_url = find_image(product['slug'])
+
+        if image_url is None:
+            missing_images.append(product['slug'])
+
         existing = MenuItem.query.filter_by(
-            name=product['name'],           # Имя продукта должно совпадать
-            category_id=category.id          # ID категории должно совпадать
+            name=product['name'],
+            category_id=category.id,
         ).first()
-        
-        # Если продукт не найден (existing == None)
+
         if not existing:
-            # Создаем новый объект MenuItem
             item = MenuItem(
-                name=product['name'],        # Название блюда
-                price=product['price'],      # Цена блюда
-                category_id=category.id      # ID категории (связь с таблицей Category)
+                name=product['name'],
+                price=product['price'],
+                category_id=category.id,
+                image_url=image_url,
             )
-            
-            # Добавляем объект в сессию базы данных
             db.session.add(item)
-            
-            # Увеличиваем счетчик добавленных продуктов
             added_count += 1
-            
-            # Выводим сообщение об успешном добавлении
-            print(f'✅ Добавлен: {product["name"]} - {product["price"]} руб. (категория: {product["category_name"]})')
+            print(f'✅ {product["name"]} — {product["price"]:.0f} ₽ (image: {image_url or "—"})')
         else:
-            # Если продукт уже существует, выводим предупреждение
-            print(f'⚠️ Продукт "{product["name"]}" уже существует в категории "{product["category_name"]}"')
-    
-    # Сохраняем все добавленные продукты в базу данных
-  
+            # Если картинка появилась — обновим существующий товар.
+            if image_url and existing.image_url != image_url:
+                existing.image_url = image_url
+                updated_image_count += 1
+                print(f'🖼️  Обновлена картинка: {product["name"]} → {image_url}')
+
     db.session.commit()
-    
-    # ВЫВОД СТАТИСТИКИ
-    
+
+    # ========== СТАТИСТИКА ==========
     print(f'\n{"="*50}')
-    print(f'📊 СТАТИСТИКА ДОБАВЛЕНИЯ:')
-    print(f'{"="*50}')
-    print(f'✅ Всего добавлено продуктов: {added_count}')
-    
-    # ОТОБРАЖЕНИЕ ВСЕХ ПРОДУКТОВ
-    
-    print(f'\n🍽️ ТЕКУЩИЙ СПИСОК ПРОДУКТОВ В БАЗЕ ДАННЫХ:')
-    print(f'{"="*50}')
-    
-    # Получаем все продукты из базы данных
-    # order_by(MenuItem.category_id) - сортируем по ID категории
-    all_items = MenuItem.query.order_by(MenuItem.category_id).all()
-    
-    # Переменная для хранения текущей категории (для группировки)
-    current_category = None
-    
-    # Перебираем все продукты
-    for item in all_items:
-        # Получаем объект категории для текущего продукта
-        cat = Category.query.get(item.category_id)
-        
-        # Если категория изменилась, выводим заголовок категории
-        if current_category != cat.name:
-            current_category = cat.name
-            print(f'\n📁 {cat.name}:')
-        
-        # Выводим информацию о продукте
-        # Форматируем цену с двумя знаками после запятой
-        print(f'  • {item.name} - {item.price:.2f} руб.')
-    
-    # Выводим общее количество продуктов
-    total_count = MenuItem.query.count()
-    print(f'\n{"="*50}')
-    print(f'📊 Всего продуктов в базе: {total_count}')
-    print(f'{"="*50}')
+    print(f'📊 СТАТИСТИКА:')
+    print(f'   Добавлено новых:   {added_count}')
+    print(f'   Обновлено картинок: {updated_image_count}')
+    print(f'   Всего в БД:        {MenuItem.query.count()}')
+    if missing_images:
+        print(f'\n📷 Нет файлов в app/static/uploads/ для слагов ({len(missing_images)} шт):')
+        for s in missing_images:
+            print(f'   • {s}.jpg  (или .png / .webp)')
+    else:
+        print('\n🎉 Все картинки на месте!')
+    print("="*50)

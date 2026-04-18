@@ -49,11 +49,13 @@
               <td>
                 <div class="d-grid gap-1">
                   <a href="/admin/menu/{{ item.id }}/edit" class="btn mifud-btn-primary btn-sm">РЕДАКТИРОВАТЬ</a>
-                  {% if item.is_available %}
-                    <a href="/admin/menu/{{ item.id }}/toggle" class="btn btn-outline-danger btn-sm">УБРАТЬ</a>
-                  {% else %}
-                    <a href="/admin/menu/{{ item.id }}/toggle" class="btn btn-outline-success btn-sm">ВЕРНУТЬ</a>
-                  {% endif %}
+                  <form method="post" action="/admin/menu/{{ item.id }}/toggle" class="d-grid">
+                    {% if item.is_available %}
+                      <button type="submit" class="btn btn-outline-danger btn-sm">УБРАТЬ</button>
+                    {% else %}
+                      <button type="submit" class="btn btn-outline-success btn-sm">ВЕРНУТЬ</button>
+                    {% endif %}
+                  </form>
                 </div>
               </td>
             </tr>

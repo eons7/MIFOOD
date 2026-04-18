@@ -1,0 +1,7 @@
+{# HTMX-partial: компактный блок корзины с итогом и кол-вом позиций #}
+<div id="cart-fragment" class="mifud-cart-fragment">
+  <div class="d-flex align-items-center justify-content-between">
+    <span class="text-muted small">В корзине: {{ cart_count|default(0) }} шт.</span>
+    <span class="fw-800 mifud-title">{{ (cart_total|default(0))|int }} ₽</span>
+  </div>
+</div>

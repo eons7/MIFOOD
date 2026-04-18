@@ -7,7 +7,7 @@
     {# Заголовок: "Оформить заказ" + сумма корзины #}
     <div class="d-flex align-items-center justify-content-between mb-3">
       <a href="/orders/create" class="btn mifud-btn-primary">ОФОРМИТЬ ЗАКАЗ</a>
-      <span class="fw-800 mifud-title">{{ cart_total|default(0) }} ₽</span>
+      <span class="fw-800 mifud-title" id="cart-badge">{{ (cart_total|default(0))|int }} ₽</span>
     </div>
 
     {# Поиск #}
@@ -30,7 +30,7 @@
     </div>
 
     {# Фильтры-чипсы по категориям #}
-    <div class="mifud-chips mb-3">
+    <div class="mifud-chips mb-3" id="cat-chips">
       <button
         class="mifud-chip is-active"
         name="category"
@@ -38,6 +38,7 @@
         hx-get="/menu/items"
         hx-target="#items-list"
         hx-include="[name='q']"
+        onclick="document.querySelectorAll('#cat-chips .mifud-chip').forEach(c=>c.classList.remove('is-active')); this.classList.add('is-active')"
       >Все</button>
       {% for cat in categories %}
         <button
@@ -47,6 +48,7 @@
           hx-get="/menu/items"
           hx-target="#items-list"
           hx-include="[name='q']"
+          onclick="document.querySelectorAll('#cat-chips .mifud-chip').forEach(c=>c.classList.remove('is-active')); this.classList.add('is-active')"
         >{{ cat.name }}</button>
       {% endfor %}
     </div>
@@ -56,4 +58,46 @@
       {% include "menu/_items_list.html" %}
     </div>
   </section>
+
+  <script>
+    window.coffeeSelectSize = function(radio) {
+      const card = radio.closest('[data-coffee-card]');
+      card.querySelector('[data-coffee-price]').textContent = radio.dataset.price + ' ₽';
+      const qtyVal = card.querySelector('[data-coffee-qty]');
+      if (qtyVal) qtyVal.textContent = radio.dataset.qty || '0';
+    };
+    window.coffeeAdd = function(btn) {
+      const card = btn.closest('[data-coffee-card]');
+      const checked = card.querySelector('input[type="radio"]:checked');
+      if (!checked) return;
+      htmx.ajax('POST', '/menu/add/' + checked.dataset.id, {target: '#cart-badge', swap: 'outerHTML'});
+    };
+    window.coffeeRemove = function(btn) {
+      const card = btn.closest('[data-coffee-card]');
+      const checked = card.querySelector('input[type="radio"]:checked');
+      if (!checked) return;
+      if ((parseInt(checked.dataset.qty || '0', 10)) <= 0) return;
+      htmx.ajax('POST', '/menu/remove/' + checked.dataset.id, {
+        target: '#cart-badge', swap: 'outerHTML',
+        headers: {'HX-Request': 'true'}
+      });
+    };
+    // После add/remove синхронизируем data-qty у радио и видимый счётчик
+    document.body.addEventListener('htmx:afterRequest', function(e) {
+      if (!e.detail || !e.detail.successful) return;
+      const path = (e.detail.pathInfo && e.detail.pathInfo.requestPath) || '';
+      const m = path.match(/^\/menu\/(add|remove)\/(\d+)$/);
+      if (!m) return;
+      const action = m[1], id = m[2];
+      document.querySelectorAll('[data-coffee-card] input[type="radio"][data-id="' + id + '"]').forEach(function(r) {
+        let q = parseInt(r.dataset.qty || '0', 10);
+        q = action === 'add' ? q + 1 : Math.max(0, q - 1);
+        r.dataset.qty = String(q);
+        if (r.checked) {
+          const qv = r.closest('[data-coffee-card]').querySelector('[data-coffee-qty]');
+          if (qv) qv.textContent = String(q);
+        }
+      });
+    });
+  </script>
 {% endblock %}
