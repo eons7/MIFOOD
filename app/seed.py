@@ -1,4 +1,7 @@
 import os
+from pathlib import Path
+
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app import create_app
 from app.extensions import db
@@ -11,17 +14,90 @@ from app.models.order import Order, OrderItem  # noqa: F401
 from app.models.reservation import Reservation, Table  # noqa: F401
 
 
-UPLOADS_DIR = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
+SEED_IMAGES_DIR = Path(__file__).resolve().parent.parent / 'seed_images'
+UPLOADS_DIR = Path(__file__).resolve().parent / 'static' / 'uploads'
 IMAGE_EXTS = ('.jpg', '.jpeg', '.png', '.webp')
+MAX_SIZE = (800, 800)
+JPEG_QUALITY = 85
+
+
+def process_seed_images():
+    """Берёт raw-файлы из seed_images/<slug>.<ext>, жмёт и кладёт
+    в static/uploads/<slug>.jpg.
+
+    Валидация:
+      • whitelist расширений (IMAGE_EXTS) — остальные пропускаются;
+      • Pillow verify — защита от переименованных бинарников;
+      • EXIF-ориентация применяется до ресайза;
+      • thumbnail до MAX_SIZE с сохранением пропорций;
+      • альфа-канал сводится на белый фон (JPEG его не поддерживает);
+      • итоговый файл всегда .jpg — чтобы find_image работал предсказуемо.
+    """
+    if not SEED_IMAGES_DIR.exists():
+        print(f'ℹ️  {SEED_IMAGES_DIR} не найдена — нечего обрабатывать.')
+        return
+
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+    processed = 0
+    skipped = 0
+    for src in sorted(SEED_IMAGES_DIR.iterdir()):
+        if not src.is_file() or src.name.startswith('.'):
+            continue
+
+        ext = src.suffix.lower()
+        if ext not in IMAGE_EXTS:
+            print(f'⚠️  {src.name}: расширение {ext!r} не в whitelist {IMAGE_EXTS}')
+            skipped += 1
+            continue
+
+        try:
+            with Image.open(src) as img:
+                img.verify()
+        except (UnidentifiedImageError, OSError) as e:
+            print(f'⚠️  {src.name}: не валидное изображение ({e})')
+            skipped += 1
+            continue
+
+        try:
+            with Image.open(src) as img:
+                img = ImageOps.exif_transpose(img)
+                img.thumbnail(MAX_SIZE, Image.Resampling.LANCZOS)
+
+                if img.mode in ('RGBA', 'LA'):
+                    bg = Image.new('RGB', img.size, (255, 255, 255))
+                    bg.paste(img, mask=img.split()[-1])
+                    img = bg
+                elif img.mode == 'P':
+                    img = img.convert('RGBA')
+                    bg = Image.new('RGB', img.size, (255, 255, 255))
+                    bg.paste(img, mask=img.split()[-1])
+                    img = bg
+                elif img.mode != 'RGB':
+                    img = img.convert('RGB')
+
+                dst = UPLOADS_DIR / f'{src.stem}.jpg'
+                img.save(dst, 'JPEG', quality=JPEG_QUALITY, optimize=True)
+                print(f'🖼️  {src.name} → uploads/{dst.name} ({dst.stat().st_size // 1024} КБ, {img.size[0]}×{img.size[1]})')
+                processed += 1
+        except Exception as e:
+            print(f'⚠️  {src.name}: ошибка обработки ({e})')
+            skipped += 1
+
+    print(f'📦 Фото: обработано {processed}, пропущено {skipped}')
 
 
 def find_image(slug: str) -> str | None:
-    """Ищет файл uploads/<slug>.<ext> и возвращает URL-путь для шаблона."""
+    """Ищет файл uploads/<slug>.<ext> и возвращает URL-путь для шаблона.
+
+    После process_seed_images() все файлы сохранены как .jpg, но сохраняем
+    поиск по всем IMAGE_EXTS — на случай, если кто-то положил файл вручную.
+    """
     if not slug:
         return None
     for ext in IMAGE_EXTS:
         filename = slug + ext
-        if os.path.isfile(os.path.join(UPLOADS_DIR, filename)):
+        if (UPLOADS_DIR / filename).is_file():
             return '/static/uploads/' + filename
     return None
 
@@ -31,6 +107,10 @@ app = create_app()
 
 with app.app_context():
     db.create_all()
+
+    # ========== ОБРАБОТКА ФОТО ==========
+    # Raw-файлы из seed_images/ → сжатые .jpg в static/uploads/
+    process_seed_images()
 
     # ========== КАТЕГОРИИ ==========
     first_courses = Category.query.filter_by(name='Первые блюда').first()

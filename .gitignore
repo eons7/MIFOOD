@@ -21,3 +21,11 @@ instance/
 *.egg-info/
 CLAUDE.md
 .claude/
+
+# Raw фото для seed (обрабатываются и кладутся в static/uploads/)
+seed_images/*
+!seed_images/.gitkeep
+
+# Пользовательские загрузки (генерируются админкой / seed'ом)
+app/static/uploads/*
+!app/static/uploads/.gitkeep
