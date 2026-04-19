@@ -39,14 +39,24 @@
                 <td>{{ item.menu_item.name | pretty_name }}</td>
                 <td class="text-center">
                   <div class="d-inline-flex align-items-center gap-1">
-                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1">−</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1"
+                            hx-post="/menu/remove/{{ item.menu_item.id }}"
+                            hx-swap="none"
+                            hx-on::after-request="if(event.detail.successful) window.location.reload()">−</button>
                     <span class="fw-bold">{{ item.quantity }}</span>
-                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1">+</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1"
+                            hx-post="/menu/add/{{ item.menu_item.id }}"
+                            hx-swap="none"
+                            hx-on::after-request="if(event.detail.successful) window.location.reload()">+</button>
                   </div>
                 </td>
                 <td class="text-end fw-bold">{{ (item.menu_item.price * item.quantity)|int }} ₽</td>
                 <td class="text-end">
-                  <button type="button" class="btn btn-sm text-muted p-0" aria-label="Удалить">&times;</button>
+                  <button type="button" class="btn btn-sm text-muted p-0" aria-label="Удалить"
+                          hx-post="/menu/update/{{ item.menu_item.id }}"
+                          hx-vals='{"quantity": 0}'
+                          hx-swap="none"
+                          hx-on::after-request="if(event.detail.successful) window.location.reload()">&times;</button>
                 </td>
               </tr>
             {% endfor %}
