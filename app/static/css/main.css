@@ -138,6 +138,13 @@ body {
   border-radius: 0.5rem;
 }
 
+.form-control.mifud-input::placeholder,
+.form-select.mifud-input::placeholder {
+  color: var(--mifud-blue);
+  opacity: 1;
+  font-weight: 700;
+}
+
 .form-control.mifud-input:focus,
 .form-select.mifud-input:focus {
   border-color: var(--mifud-orange-700);
@@ -300,6 +307,47 @@ body {
   text-align: center;
 }
 
+/* Выбор размера кофе (S / M / L) */
+.mifud-sizes {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.25rem;
+  flex-wrap: wrap;
+}
+.mifud-size {
+  cursor: pointer;
+}
+.mifud-size input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.mifud-size-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1.5px solid rgba(11, 94, 168, 0.25);
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.55rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--mifud-blue);
+  background: #fff;
+  transition: background 0.15s, border-color 0.15s;
+}
+.mifud-size input[type="radio"]:checked + .mifud-size-label {
+  background: var(--mifud-blue);
+  color: #fff;
+  border-color: var(--mifud-blue);
+}
+.mifud-size-letter {
+  font-weight: 900;
+}
+.mifud-size-price {
+  font-weight: 700;
+  opacity: 0.9;
+}
+
 /* -----------------------------
    Оформление заказа: шаги/таблица/итог
    ----------------------------- */
@@ -363,9 +411,14 @@ body {
   border-color: rgba(11, 94, 168, 0.25);
 }
 
-.mifud-table-card.is-selected {
+.mifud-table-card.is-selected,
+.mifud-table-card--selectable:has(input[type="radio"]:checked) {
   background: rgba(245, 155, 35, 0.28);
   border-color: rgba(245, 155, 35, 0.55);
+}
+
+.mifud-table-card--selectable {
+  cursor: pointer;
 }
 
 .mifud-table-card.is-closed {
@@ -458,4 +511,33 @@ body {
   color: #111;
   font-weight: 800;
   border-bottom: 0;
+}
+
+/* Мини-игра */
+.mifud-game-block summary {
+  list-style: none;
+  cursor: pointer;
+  display: block;
+}
+
+.mifud-game-block summary::-webkit-details-marker {
+  display: none;
+}
+
+.mifud-game-wrap {
+  width: 100%;
+  height: 620px;
+  overflow: hidden;
+  border-radius: 12px;
+  position: relative;
+}
+
+.mifud-game-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
 }

@@ -1,0 +1,35 @@
+{# Partial: сетка столов для HTMX-обновления #}
+{% for table in tables %}
+  {% set status = table_statuses.get(table.id, 'free') %}
+  {% if status == 'busy' or status == 'closed' %}
+    <div class="mifud-table-card {{ 'is-busy' if status == 'busy' else 'is-closed' }}">
+  {% else %}
+    <div class="mifud-table-card {{ 'is-selected' if status == 'selected' else '' }}"
+         hx-get="?selected={{ table.id }}"
+         hx-target="#tables-grid"
+         hx-swap="innerHTML"
+         style="cursor: pointer;">
+      <input type="radio" name="table_id" value="{{ table.id }}" class="visually-hidden"
+             {{ 'checked' if status == 'selected' else '' }} />
+  {% endif %}
+    <div class="d-flex align-items-center justify-content-between">
+      <div>
+        <span class="fw-800 fs-5">№{{ table.number }}</span>
+        {% if status == 'selected' %}<span class="ms-1">✓</span>{% endif %}
+        <br />
+        <span class="small text-muted">{{ table.seats }} места</span>
+      </div>
+      <div class="small fw-bold text-end">
+        {% if status == 'busy' %}
+          <span class="text-primary">занят</span>
+        {% elif status == 'closed' %}
+          <span class="text-muted">закрыт</span>
+        {% elif status == 'selected' %}
+          <span class="text-warning">выбран</span>
+        {% else %}
+          <span class="text-success">свободен</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endfor %}

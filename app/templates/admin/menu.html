@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Меню | Админ | МИФУД{% endblock %}
+
+{% block content %}
+  <section class="py-3">
+    <h1 class="h5 mifud-title mb-1">Управление меню</h1>
+    <p class="small text-muted mb-3">Добавляйте блюда и управляйте их доступностью</p>
+
+    {# Фильтры #}
+    <div class="mifud-chips mb-3">
+      <button class="mifud-chip is-active">ВСЕ ({{ counts.all }})</button>
+      <button class="mifud-chip">В МЕНЮ ({{ counts.available }})</button>
+      <button class="mifud-chip">УБРАНО ({{ counts.unavailable }})</button>
+    </div>
+
+    {# Таблица блюд #}
+    <div class="table-responsive">
+      <table class="table table-sm mifud-table align-middle">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Название</th>
+            <th>Категория</th>
+            <th>Цена</th>
+            <th>Статус</th>
+            <th>Действие</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+            <tr{% if not item.is_available %} style="opacity: 0.6;"{% endif %}>
+              <td class="fw-bold">{{ loop.index }}</td>
+              <td>
+                <div class="fw-bold">{{ item.name }}</div>
+                {% if item.description %}
+                  <div class="small text-muted">{{ item.description|truncate(40) }}</div>
+                {% endif %}
+              </td>
+              <td class="small">{{ item.category.name }}</td>
+              <td class="fw-bold">{{ item.price|int }} ₽</td>
+              <td>
+                {% if item.is_available %}
+                  <span class="small fw-bold text-success">В меню</span>
+                {% else %}
+                  <span class="small fw-bold text-muted">Убрано</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="d-grid gap-1">
+                  <a href="/admin/menu/{{ item.id }}/edit" class="btn mifud-btn-primary btn-sm">РЕДАКТИРОВАТЬ</a>
+                  <form method="post" action="/admin/menu/{{ item.id }}/toggle" class="d-grid">
+                    {% if item.is_available %}
+                      <button type="submit" class="btn btn-outline-danger btn-sm">УБРАТЬ</button>
+                    {% else %}
+                      <button type="submit" class="btn btn-outline-success btn-sm">ВЕРНУТЬ</button>
+                    {% endif %}
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="6" class="text-center text-muted py-3">Нет блюд</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

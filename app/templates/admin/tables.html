@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Столы | Админ | МИФУД{% endblock %}
+
+{% block content %}
+  <section class="py-3">
+    <h1 class="h5 mifud-title mb-1">Управление столами</h1>
+    <p class="small text-muted mb-3">Добавляйте столы и управляйте их доступностью</p>
+
+    {# Форма добавления #}
+    <form method="post" action="{{ url_for('admin.tables') }}" class="mifud-card p-3 mb-3">
+      <h2 class="h6 fw-bold mb-2">Добавить стол</h2>
+      <div class="row g-2">
+        <div class="col-5">
+          <label for="number" class="small fw-bold">Номер</label>
+          <input id="number" name="number" type="number" min="1" required class="form-control mifud-input" />
+        </div>
+        <div class="col-5">
+          <label for="seats" class="small fw-bold">Мест</label>
+          <input id="seats" name="seats" type="number" min="1" required class="form-control mifud-input" />
+        </div>
+        <div class="col-2 d-flex align-items-end">
+          <button type="submit" class="btn mifud-btn-primary w-100">+</button>
+        </div>
+      </div>
+    </form>
+
+    {# Список #}
+    <div class="table-responsive">
+      <table class="table table-sm mifud-table align-middle">
+        <thead>
+          <tr>
+            <th>№</th>
+            <th>Мест</th>
+            <th>Статус</th>
+            <th>Действие</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in tables %}
+            <tr{% if not t.is_active %} style="opacity: 0.6;"{% endif %}>
+              <td class="fw-bold">№{{ t.number }}</td>
+              <td>{{ t.seats }}</td>
+              <td>
+                {% if t.is_active %}
+                  <span class="small fw-bold text-success">Активен</span>
+                {% else %}
+                  <span class="small fw-bold text-muted">Скрыт</span>
+                {% endif %}
+              </td>
+              <td>
+                <form method="post" action="/admin/tables/{{ t.id }}/toggle" class="d-grid">
+                  {% if t.is_active %}
+                    <button type="submit" class="btn btn-outline-danger btn-sm">СКРЫТЬ</button>
+                  {% else %}
+                    <button type="submit" class="btn btn-outline-success btn-sm">ВЕРНУТЬ</button>
+                  {% endif %}
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Нет столов</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

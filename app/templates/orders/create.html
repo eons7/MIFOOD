@@ -1,1 +1,104 @@
-{# TODO: шаблон #}
+{% extends "base.html" %}
+
+{% block title %}Оформление заказа | МИФУД{% endblock %}
+
+{% block content %}
+  <section class="py-3">
+    {# Stepper: шаги оформления #}
+    <div class="mifud-steps mb-4">
+      <span class="mifud-step is-current">
+        <span class="mifud-step-dot">1</span> Состав заказа
+      </span>
+      <span class="mifud-step">
+        <span class="mifud-step-dot">2</span> Выбор стола
+      </span>
+      <span class="mifud-step">
+        <span class="mifud-step-dot">3</span> Статус заказа
+      </span>
+    </div>
+
+    <h1 class="h5 mifud-title">Оформление заказа</h1>
+    <p class="text-muted small mb-3">Проверьте состав и укажите время получения</p>
+
+    <form method="post" action="/orders/create">
+      {# Таблица состава заказа #}
+      <div class="mifud-card p-3 mb-3">
+        <h2 class="h6 fw-bold mb-2">Состав заказа</h2>
+        <table class="table table-sm mb-0 align-middle">
+          <thead>
+            <tr>
+              <th class="fw-bold">Блюдо</th>
+              <th class="fw-bold text-center">Кол-во</th>
+              <th class="fw-bold text-end">Цена</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in order_items %}
+              <tr>
+                <td>{{ item.menu_item.name | pretty_name }}</td>
+                <td class="text-center">
+                  <div class="d-inline-flex align-items-center gap-1">
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1">−</button>
+                    <span class="fw-bold">{{ item.quantity }}</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1">+</button>
+                  </div>
+                </td>
+                <td class="text-end fw-bold">{{ (item.menu_item.price * item.quantity)|int }} ₽</td>
+                <td class="text-end">
+                  <button type="button" class="btn btn-sm text-muted p-0" aria-label="Удалить">&times;</button>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {# Время получения #}
+      <div class="mb-3">
+        <label class="fw-bold mb-1" for="pickup_time">Время получения</label>
+        <input
+          id="pickup_time"
+          name="pickup_time"
+          type="datetime-local"
+          class="form-control mifud-input"
+          required
+        />
+      </div>
+
+      {# Комментарий #}
+      <div class="mb-3">
+        <label class="fw-bold mb-1" for="comment">Комментарий (необязательно)</label>
+        <textarea
+          id="comment"
+          name="comment"
+          rows="3"
+          class="form-control mifud-input"
+          placeholder="Например: без лука"
+        ></textarea>
+      </div>
+
+      {# Чекбокс бронирования #}
+      <div class="d-flex align-items-start gap-2 mb-3">
+        <input type="checkbox" id="reserve_table" name="reserve_table" class="form-check-input mt-1" />
+        <label for="reserve_table">
+          <span class="fw-bold">Забронировать стол</span>
+          <br />
+          <span class="small text-muted">На следующем шаге вы выберете место в зале</span>
+        </label>
+      </div>
+
+      {# Итого #}
+      <div class="d-flex align-items-center justify-content-between fw-bold fs-5 mb-4">
+        <span>Итого</span>
+        <span>{{ total_price|default(0)|int }} ₽</span>
+      </div>
+
+      {# Кнопки навигации #}
+      <div class="d-flex gap-2">
+        <a href="/menu" class="btn btn-outline-primary flex-grow-1">← ВЕРНУТЬСЯ В МЕНЮ</a>
+        <button type="submit" class="btn mifud-btn-primary flex-grow-1">ДАЛЕЕ →</button>
+      </div>
+    </form>
+  </section>
+{% endblock %}

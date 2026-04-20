@@ -1,1 +1,98 @@
-{# TODO: шаблон #}
+{# Partial: список карточек блюд (для HTMX-подгрузки).
+   groups — [{'kind':'single','item':MenuItem} | {'kind':'coffee','name':..,'sizes':[{'size':'M','item':MenuItem}, ...]}] #}
+{% for g in groups %}
+  {% if g.kind == 'coffee' %}
+    <div class="mifud-product mb-3" data-coffee-card>
+      <img
+        class="mifud-product-img"
+        src="{{ g.image_url or url_for('static', filename='img/placeholder.png') }}"
+        alt="{{ g.name }}"
+      />
+      <div class="mifud-product-body">
+        <div class="d-flex align-items-start justify-content-between gap-2">
+          <div>
+            <h3 class="mifud-product-title">{{ g.name }}</h3>
+            {% if g.description %}
+              <p class="small text-muted mb-1">{{ g.description }}</p>
+            {% endif %}
+          </div>
+          <span class="mifud-category-pill flex-shrink-0">{{ g.category.name }}</span>
+        </div>
+
+        {% if g.sizes|length > 1 %}
+          <div class="mifud-sizes">
+            {% for s in g.sizes %}
+              <label class="mifud-size">
+                <input
+                  type="radio"
+                  name="size-{{ g.name }}"
+                  data-id="{{ s.item.id }}"
+                  data-price="{{ s.item.price|int }}"
+                  data-qty="{{ cart.get(s.item.id|string, 0) if cart else 0 }}"
+                  {% if loop.first %}checked{% endif %}
+                  onchange="coffeeSelectSize(this)"
+                />
+                <span class="mifud-size-label">
+                  <span class="mifud-size-letter">{{ s.size }}</span>
+                  <span class="mifud-size-price">{{ s.item.price|int }} ₽</span>
+                </span>
+              </label>
+            {% endfor %}
+          </div>
+        {% else %}
+          {# Один размер — радио скрыто, но нужно для coffeeAdd()/Remove() #}
+          <input type="radio" checked hidden
+                 data-id="{{ g.sizes[0].item.id }}"
+                 data-price="{{ g.sizes[0].item.price|int }}"
+                 data-qty="{{ cart.get(g.sizes[0].item.id|string, 0) if cart else 0 }}" />
+        {% endif %}
+
+        <div class="mifud-product-meta">
+          <span class="mifud-price" data-coffee-price>{{ g.sizes[0].item.price|int }} ₽</span>
+          <div class="mifud-stepper">
+            <button type="button" aria-label="Убавить" onclick="coffeeRemove(this)">−</button>
+            <span class="mifud-stepper-value" data-coffee-qty>{{ cart.get(g.sizes[0].item.id|string, 0) if cart else 0 }}</span>
+            <button type="button" aria-label="Добавить" onclick="coffeeAdd(this)">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    {% set item = g.item %}
+    <div class="mifud-product mb-3">
+      <img
+        class="mifud-product-img"
+        src="{{ item.image_url or url_for('static', filename='img/placeholder.png') }}"
+        alt="{{ item.name }}"
+      />
+      <div class="mifud-product-body">
+        <div class="d-flex align-items-start justify-content-between gap-2">
+          <div>
+            <h3 class="mifud-product-title">{{ item.name }}</h3>
+            {% if item.description %}
+              <p class="small text-muted mb-1">{{ item.description }}</p>
+            {% endif %}
+          </div>
+          <span class="mifud-category-pill flex-shrink-0">{{ item.category.name }}</span>
+        </div>
+        <div class="mifud-product-meta">
+          <span class="mifud-price">{{ item.price|int }} ₽</span>
+          <div class="mifud-stepper">
+            <button type="button" aria-label="Убавить"
+                    hx-post="/menu/remove/{{ item.id }}"
+                    hx-target="#cart-badge"
+                    hx-swap="outerHTML"
+                    hx-headers='{"HX-Request": "true"}'>−</button>
+            <span class="mifud-stepper-value" id="qty-{{ item.id }}">{{ cart.get(item.id|string, 0) if cart else 0 }}</span>
+            <button type="button" aria-label="Добавить"
+                    hx-post="/menu/add/{{ item.id }}"
+                    hx-target="#cart-badge"
+                    hx-swap="outerHTML">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+{% else %}
+  <div class="text-center text-muted py-4">Блюда не найдены</div>
+{% endfor %}

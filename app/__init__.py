@@ -1,45 +1,65 @@
-from flask import Flask, render_template
-from .extensions import db, migrate, login_manager
-from .config import config
+import os
+import re
+
+from flask import Flask, make_response
+
+from app.extensions import db, migrate, login_manager
+from app.config import config as config_map
+
+_SIZE_SUFFIX_RE = re.compile(r'^(.+)_([SML])$')
 
 
-def create_app(config_name="development"):
+def pretty_name(name: str | None) -> str:
+    """Убирает суффикс размера: «Капучино_L» → «Капучино (L)»."""
+    if not name:
+        return ''
+    m = _SIZE_SUFFIX_RE.match(name)
+    return f"{m.group(1)} ({m.group(2)})" if m else name
+
+
+def create_app(config_name: str | None = None):
     app = Flask(__name__)
-    app.config.from_object(config[config_name])
+    config_name = config_name or os.getenv('FLASK_ENV', 'default')
+    app.config.from_object(config_map.get(config_name, config_map['default']))
 
-    @app.get("/")
-    def home():
-        # В проекте blueprint-роуты пока не реализованы, поэтому даём
-        # стартовую страницу, чтобы можно было увидеть базовую верстку.
-        return render_template("home.html")
-
-    # Подключение расширений
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
 
-    @login_manager.user_loader
-    def load_user(user_id: str):
-        # Минимальная реализация, чтобы шаблоны с current_user работали.
-        # Модели/роуты будут дополняться позже.
-        try:
-            from app.models.user import User
-        except Exception:
-            return None
-        try:
-            return User.query.get(int(user_id))
-        except Exception:
-            return None
+    app.jinja_env.filters['pretty_name'] = pretty_name
 
-    # Регистрация blueprint'ов (модулей сайта)
-    from .blueprints.auth         import auth_bp
-    from .blueprints.menu         import menu_bp
-    from .blueprints.orders       import orders_bp
-    from .blueprints.reservations import reservations_bp
+    # Регистрация blueprints
+    from app.blueprints.auth.routes import auth_bp
+    from app.blueprints.menu.routes import menu_bp
+    from app.blueprints.orders.routes import orders_bp
+    from app.blueprints.reservations.routes import reservations_bp
+    from app.blueprints.admin.routes import admin_bp
 
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(menu_bp)
-    app.register_blueprint(orders_bp)
-    app.register_blueprint(reservations_bp)
+    app.register_blueprint(auth_bp,         url_prefix='/auth')
+    app.register_blueprint(menu_bp,         url_prefix='/menu')
+    app.register_blueprint(orders_bp,       url_prefix='/orders')
+    app.register_blueprint(reservations_bp, url_prefix='/reservations')
+    app.register_blueprint(admin_bp,        url_prefix='/admin')
+
+    @app.route('/')
+    def root():
+        from flask import redirect, url_for
+        from flask_login import current_user
+        if current_user.is_authenticated and current_user.is_admin:
+            return redirect(url_for('admin.orders'))
+        return redirect(url_for('menu.index'))
+
+    @app.route('/sw.js')
+    def service_worker():
+        response = make_response(app.send_static_file('sw.js'))
+        response.headers['Content-Type'] = 'application/javascript'
+        response.headers['Service-Worker-Allowed'] = '/'
+        return response
 
     return app
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    from app.models.user import User
+    return User.query.get(int(user_id))

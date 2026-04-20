@@ -1,1 +1,80 @@
-{# TODO: шаблон #}
+{% extends "base.html" %}
+
+{% block title %}Регистрация | МИФУД{% endblock %}
+
+{% block content %}
+  <section class="mifud-auth-block py-4">
+    <div class="text-center mb-4">
+      <div class="mifud-auth-logo mx-auto mb-3">
+        <img class="mifud-logo-img" src="{{ url_for('static', filename='img/logo.png') }}" alt="Логотип МИФУД" />
+      </div>
+    </div>
+
+    <div class="mx-auto" style="max-width: 360px;">
+      <h1 class="h4 mifud-title mb-4">Регистрация</h1>
+
+      <form method="post" action="/auth/register" class="d-grid gap-3">
+        <div>
+          <label class="visually-hidden" for="name">Имя</label>
+          <input
+            id="name"
+            name="name"
+            type="text"
+            class="form-control form-control-lg mifud-input"
+            placeholder="ИМЯ"
+            autocomplete="name"
+            required
+          />
+        </div>
+
+        <div>
+          <label class="visually-hidden" for="email">Email</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            class="form-control form-control-lg mifud-input"
+            placeholder="EMAIL"
+            autocomplete="email"
+            required
+          />
+        </div>
+
+        <div>
+          <label class="visually-hidden" for="password">Пароль</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            class="form-control form-control-lg mifud-input"
+            placeholder="ПАРОЛЬ"
+            autocomplete="new-password"
+            required
+          />
+        </div>
+
+        <div>
+          <label class="visually-hidden" for="password_confirm">Повтор пароля</label>
+          <input
+            id="password_confirm"
+            name="password_confirm"
+            type="password"
+            class="form-control form-control-lg mifud-input"
+            placeholder="ПОВТОР ПАРОЛЯ"
+            autocomplete="new-password"
+            required
+          />
+        </div>
+
+        <button type="submit" class="btn mifud-btn-primary btn-lg w-100 mt-2">СОЗДАТЬ АККАУНТ</button>
+      </form>
+
+      <div class="mifud-auth-actions mt-3">
+        <span class="fw-semibold">Уже есть аккаунт?</span>
+        <a class="fw-bold text-decoration-none text-primary" href="/auth/login">
+          ВОЙТИ →
+        </a>
+      </div>
+    </div>
+  </section>
+{% endblock %}
