@@ -6,7 +6,8 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from app import create_app
 from app.extensions import db
 from app.models.menu import Category, MenuItem
-from app.models.user import User   # noqa: F401
+from app.models.user import User
+from app.services.auth_service import set_password
 
 # ВАЖНО: импортируем все модели, чтобы SQLAlchemy успел зарегистрировать имена
 # до конфигурации relationship'ов.
@@ -111,6 +112,23 @@ with app.app_context():
     # ========== ОБРАБОТКА ФОТО ==========
     # Raw-файлы из seed_images/ → сжатые .jpg в static/uploads/
     process_seed_images()
+
+    # ========== ДЕМО-ЮЗЕРЫ ==========
+    demo_users = [
+        {'name': 'Admin',  'email': 'admin@mifi.ru', 'password': 'password', 'is_admin': True},
+        {'name': 'Иван',   'email': 'ivan@mifi.ru',  'password': 'password', 'is_admin': False},
+    ]
+    users_added = 0
+    for u in demo_users:
+        if not User.query.filter_by(email=u['email']).first():
+            user = User(name=u['name'], email=u['email'], is_admin=u['is_admin'])
+            set_password(user, u['password'])
+            db.session.add(user)
+            users_added += 1
+            print(f'✅ Юзер: {u["email"]} (admin={u["is_admin"]})')
+    if users_added:
+        db.session.commit()
+    print(f'👤 Юзеры: добавлено {users_added}, всего {User.query.count()}')
 
     # ========== КАТЕГОРИИ ==========
     first_courses = Category.query.filter_by(name='Первые блюда').first()
