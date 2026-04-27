@@ -4,8 +4,13 @@
 
 {% block content %}
   <section class="py-3">
-    <h1 class="h5 mifud-title mb-1">Управление меню</h1>
-    <p class="small text-muted mb-3">Добавляйте блюда и управляйте их доступностью</p>
+    <div class="d-flex align-items-start justify-content-between mb-3 gap-2">
+      <div>
+        <h1 class="h5 mifud-title mb-1">Управление меню</h1>
+        <p class="small text-muted mb-0">Добавляйте блюда и управляйте их доступностью</p>
+      </div>
+      <a href="/admin/menu/add" class="btn mifud-btn-primary flex-shrink-0">+ ДОБАВИТЬ</a>
+    </div>
 
     {# Фильтры #}
     <div class="mifud-chips mb-3">
@@ -50,6 +55,7 @@
                 <div class="d-grid gap-1">
                   <a href="/admin/menu/{{ item.id }}/edit" class="btn mifud-btn-primary btn-sm">РЕДАКТИРОВАТЬ</a>
                   <form method="post" action="/admin/menu/{{ item.id }}/toggle" class="d-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                     {% if item.is_available %}
                       <button type="submit" class="btn btn-outline-danger btn-sm">УБРАТЬ</button>
                     {% else %}

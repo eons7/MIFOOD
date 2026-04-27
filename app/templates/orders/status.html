@@ -55,6 +55,7 @@
     {# Оплата онлайн (заглушка) #}
     {% if order.status in ['pending', 'confirmed', 'ready'] %}
       <form method="post" action="{{ url_for('orders.pay', id=order.id) }}" class="mb-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <button type="submit" class="btn mifud-btn-primary w-100">ОПЛАТИТЬ ОНЛАЙН</button>
       </form>
     {% elif order.status == 'paid' %}
@@ -92,42 +93,10 @@
       </div>
     {% endif %}
 
-    {# Таймлайн статуса #}
-    <h2 class="h6 fw-bold mb-2">Статус заказа</h2>
-    {% if order.status == 'cancelled' %}
-      <div class="alert alert-danger mb-4">Заказ отменён</div>
-    {% else %}
-      {# Текущий шаг: pending=1, paid/confirmed=2, ready=3, completed=4 #}
-      {% set step =
-        1 if order.status == 'pending' else
-        2 if order.status in ['paid', 'confirmed'] else
-        3 if order.status == 'ready' else
-        4 if order.status == 'completed' else 0 %}
-      <div class="mifud-timeline mb-4">
-        {% for i, label, note in [
-          (1, 'Оформлен',        order.created_at.strftime('%H:%M')),
-          (2, 'Принят в работу', 'столовая готовит ваш заказ'),
-          (3, 'Готов к выдаче',  'можно забирать'),
-          (4, 'Выдан',           '')
-        ] %}
-          {% if i < step %}
-            <div class="mifud-timeline-item is-done">
-          {% elif i == step %}
-            <div class="mifud-timeline-item is-active">
-          {% else %}
-            <div class="mifud-timeline-item">
-          {% endif %}
-            <div class="d-flex align-items-center gap-2">
-              <span class="fw-bold small text-muted">{{ i }}</span>
-              <span class="fw-bold">{{ label }}</span>
-            </div>
-            {% if note %}
-              <div class="small text-muted">{{ note }}</div>
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
+    {# Таймлайн статуса — обновляется через SSE без перезагрузки #}
+    <div hx-ext="sse" sse-connect="/sse/my-orders" sse-swap="order-status">
+      {% include 'orders/_status_block.html' %}
+    </div>
 
     {# Время получения #}
     <div class="d-flex align-items-center justify-content-between fw-bold">
@@ -135,4 +104,50 @@
       <span>{{ order.pickup_time.strftime('%H:%M') }} сегодня</span>
     </div>
   </section>
+
+  {# Toast-контейнер для realtime-уведомлений #}
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
+    <div id="order-toast" class="toast align-items-center border-0 text-bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body fw-bold" id="order-toast-body">Заказ готов, можно забирать!</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Закрыть"></button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var STATUS_LABELS = {
+        'pending':   'Заказ ожидает',
+        'paid':      'Заказ оплачен',
+        'confirmed': 'Заказ принят в работу',
+        'ready':     'Заказ готов, можно забирать!',
+        'completed': 'Заказ выдан',
+        'cancelled': 'Заказ отменён'
+      };
+      var THIS_ORDER_ID = {{ order.id }};
+
+      // SSE подключение само поднимется через HTMX-extension; слушаем то же соединение
+      // через addEventListener на источнике, найденном HTMX'ом.
+      // Проще — открыть свой EventSource (он будет вторым; нагрузка минимальная).
+      var es = new EventSource('/sse/my-orders');
+      es.addEventListener('order-toast', function(e) {
+        try {
+          var data = JSON.parse(e.data);
+          if (data.order_id !== THIS_ORDER_ID) return;
+          var toastEl = document.getElementById('order-toast');
+          var bodyEl  = document.getElementById('order-toast-body');
+          bodyEl.textContent = STATUS_LABELS[data.status] || ('Статус: ' + data.status);
+          // Цвет toast'а по статусу
+          toastEl.className = 'toast align-items-center border-0 ' + (
+            data.status === 'ready'     ? 'text-bg-success' :
+            data.status === 'cancelled' ? 'text-bg-danger'  :
+                                          'text-bg-primary'
+          );
+          var t = bootstrap.Toast.getOrCreateInstance(toastEl, {delay: 6000});
+          t.show();
+        } catch (err) { /* ignore */ }
+      });
+    })();
+  </script>
 {% endblock %}

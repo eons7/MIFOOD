@@ -3,7 +3,7 @@ import re
 
 from flask import Flask, make_response
 
-from app.extensions import db, migrate, login_manager
+from app.extensions import db, migrate, login_manager, csrf
 from app.config import config as config_map
 
 _SIZE_SUFFIX_RE = re.compile(r'^(.+)_([SML])$')
@@ -25,6 +25,7 @@ def create_app(config_name: str | None = None):
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
+    csrf.init_app(app)
 
     app.jinja_env.filters['pretty_name'] = pretty_name
 
@@ -34,12 +35,14 @@ def create_app(config_name: str | None = None):
     from app.blueprints.orders.routes import orders_bp
     from app.blueprints.reservations.routes import reservations_bp
     from app.blueprints.admin.routes import admin_bp
+    from app.blueprints.sse.routes import sse_bp
 
     app.register_blueprint(auth_bp,         url_prefix='/auth')
     app.register_blueprint(menu_bp,         url_prefix='/menu')
     app.register_blueprint(orders_bp,       url_prefix='/orders')
     app.register_blueprint(reservations_bp, url_prefix='/reservations')
     app.register_blueprint(admin_bp,        url_prefix='/admin')
+    app.register_blueprint(sse_bp,          url_prefix='/sse')
 
     @app.route('/')
     def root():

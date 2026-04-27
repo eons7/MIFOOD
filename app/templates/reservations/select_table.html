@@ -31,6 +31,7 @@
     {% endif %}
 
     <form method="post" action="{{ url_for('reservations.select_table') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
       <input type="hidden" name="order_id" value="{{ order.id }}" />
 
       <div class="d-grid gap-2 mb-4">

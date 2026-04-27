@@ -21,6 +21,7 @@
     <p class="text-muted small mb-3">Проверьте состав и укажите время получения</p>
 
     <form method="post" action="/orders/create">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
       {# Таблица состава заказа #}
       <div class="mifud-card p-3 mb-3">
         <h2 class="h6 fw-bold mb-2">Состав заказа</h2>

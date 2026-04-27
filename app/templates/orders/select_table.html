@@ -22,6 +22,7 @@
     <p class="fw-bold mb-3">Столы на {{ order.pickup_time.strftime('%H:%M') }}</p>
 
     <form method="post" action="/orders/{{ order.id }}/select_table">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
       {# Сетка столов (HTMX) #}
       <div id="tables-grid" class="d-grid gap-2 mb-4">
         {% include "orders/_tables_grid.html" %}

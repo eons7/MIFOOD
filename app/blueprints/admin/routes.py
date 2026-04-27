@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import MenuItem, Category, Order, Table
 from app.repositories import menu_repository, order_repository
-from app.services import menu_service
+from app.services import menu_service, pubsub
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -54,6 +54,12 @@ def update_order_status(id):
 
     order.status = new_status
     db.session.commit()
+    pubsub.publish({
+        'type': 'order-status',
+        'order_id': order.id,
+        'status': new_status,
+        'user_id': order.user_id,
+    })
     return redirect(url_for('admin.orders'))
 
 

@@ -7,6 +7,7 @@ load_dotenv()
 class BaseConfig:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-замени!")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    WTF_CSRF_TIME_LIMIT = None  # токен живёт всю сессию (иначе SSE-страница умрёт через час)
 
 
 class DevelopmentConfig(BaseConfig):
