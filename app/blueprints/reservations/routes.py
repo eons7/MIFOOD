@@ -68,9 +68,7 @@ def select_table():
 @login_required
 def index():
     reservations = reservation_repository.get_by_user(current_user.id)
-    active = [r for r in reservations if r.status == 'active']
-    history = [r for r in reservations if r.status != 'active']
-    return render_template('reservations/index.html', active=active, history=history)
+    return render_template('reservations/index.html', reservations=reservations)
 
 
 @reservations_bp.route('/<int:id>/cancel', methods=['POST'])

@@ -23,6 +23,27 @@
       <span class="small text-muted">Оформлен {{ order.created_at.strftime('%d.%m.%Y в %H:%M') }}</span>
     </div>
 
+    {# Привязанная бронь #}
+    {% if order.reservation %}
+      <div class="mifud-card p-3 mb-3 d-flex align-items-center justify-content-between">
+        <div>
+          <div class="fw-bold">Стол №{{ order.reservation.table.number }}
+            {% if order.reservation.status == 'active' %}
+              <span class="badge text-bg-success ms-1">бронь активна</span>
+            {% elif order.reservation.status == 'cancelled' %}
+              <span class="badge text-bg-danger ms-1">отменена</span>
+            {% else %}
+              <span class="badge text-bg-secondary ms-1">завершена</span>
+            {% endif %}
+          </div>
+          <div class="small text-muted">
+            {{ order.reservation.start_time.strftime('%H:%M') }}–{{ order.reservation.end_time.strftime('%H:%M') }} · {{ order.reservation.table.seats }} места
+          </div>
+        </div>
+        <a href="/reservations/" class="small fw-bold text-decoration-none text-primary">ВСЕ БРОНИ →</a>
+      </div>
+    {% endif %}
+
     {# Таблица состава #}
     <div class="mifud-card p-3 mb-3">
       <h2 class="h6 fw-bold mb-2">Состав заказа</h2>
