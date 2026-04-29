@@ -1,0 +1,32 @@
+{
+  "name": "МИФУД — столовая НИЯУ МИФИ",
+  "short_name": "МИФУД",
+  "description": "Предзаказ блюд и бронирование стола в столовой НИЯУ МИФИ",
+  "lang": "ru",
+  "start_url": "/menu",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0b5ea8",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/static/img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

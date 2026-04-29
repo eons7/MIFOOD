@@ -2,6 +2,7 @@ import os
 import re
 
 from flask import Flask, make_response
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.extensions import db, migrate, login_manager, csrf
 from app.config import config as config_map
@@ -21,6 +22,11 @@ def create_app(config_name: str | None = None):
     app = Flask(__name__)
     config_name = config_name or os.getenv('FLASK_ENV', 'default')
     app.config.from_object(config_map.get(config_name, config_map['default']))
+
+    # За nginx — доверяем X-Forwarded-* заголовкам (только на проде).
+    # ВАЖНО: не включать без реального обратного прокси — иначе можно подделать IP клиента.
+    if config_name == 'production':
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     db.init_app(app)
     migrate.init_app(app, db)
