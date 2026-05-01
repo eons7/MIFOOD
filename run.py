@@ -8,3 +8,4 @@ if __name__ == "__main__":
     # threaded=True — нужен для SSE: один поток держит длинное соединение,
     # другие потоки обрабатывают POST-запросы, которые публикуют события.
     app.run(debug=True, port=port, threaded=True)
+    app.run(debug=True, host='0.0.0.0', port=port)
