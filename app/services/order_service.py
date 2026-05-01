@@ -7,12 +7,11 @@ from app.utils.timezones import now_utc_naive
 
 CANCELLABLE_STATUSES = ['pending', 'confirmed']
 
-# Сколько ждём гостя после pickup_time, прежде чем заказ считается «не забран»
+# Окно ожидания после pickup_time перед переводом в 'expired' (минут).
 EXPIRE_AFTER_MINUTES = 15
-# На сколько минут админ может продлить заказ одной кнопкой
+# Шаг продления заказа админом (минут).
 EXTEND_MINUTES = 15
-# Если до следующей брони на столе осталось меньше — продлевать бессмысленно,
-# кнопка прячется
+# Минимальный полезный шаг продления; ниже — кнопка скрывается.
 MIN_USEFUL_EXTEND_MINUTES = 5
 
 
@@ -32,11 +31,7 @@ def cancel(order: Order) -> None:
 
 
 def expire_overdue() -> int:
-    """Помечает готовые заказы, которые гость не забрал в течение
-    EXPIRE_AFTER_MINUTES после pickup_time, как 'expired'. Связанная бронь
-    автоматически отменяется (если ещё была scheduled/active), чтобы стол
-    освободился. Лениво вызывается на страницах списков заказов.
-    """
+    """ready заказы старше EXPIRE_AFTER_MINUTES → expired; связанная бронь → cancelled."""
     now = now_utc_naive()
     threshold = now - timedelta(minutes=EXPIRE_AFTER_MINUTES)
     overdue = Order.query.filter(
@@ -53,8 +48,7 @@ def expire_overdue() -> int:
 
 
 def can_extend(order: Order) -> bool:
-    """Кнопка «продлить» нужна только когда есть бронь — иначе продлевать нечего,
-    заказ просто не истекает по времени, если двигать pickup_time."""
+    """True, если у заказа есть активная бронь и есть запас минимум MIN_USEFUL_EXTEND_MINUTES."""
     if order.status not in ('pending', 'confirmed', 'ready'):
         return False
     if order.reservation is None:
@@ -65,10 +59,7 @@ def can_extend(order: Order) -> bool:
 
 
 def max_extend_minutes(order: Order) -> int:
-    """Максимум минут, на которые можно продлить бронь без коллизии со
-    следующей бронью на этом столе. Не больше EXTEND_MINUTES.
-    Возвращает 0, если у заказа нет брони.
-    """
+    """Максимум минут продления без коллизии со следующей бронью. Cap = EXTEND_MINUTES."""
     r = order.reservation
     if r is None:
         return 0
@@ -80,11 +71,7 @@ def max_extend_minutes(order: Order) -> int:
 
 
 def extend(order: Order) -> int:
-    """Двигает pickup_time заказа и end_time связанной брони вперёд на
-    max_extend_minutes() минут. Возвращает фактическое число минут.
-    Серверный capping — даже если кто-то подделает форму, продление
-    не залезет в следующую бронь.
-    """
+    """Двигает pickup_time и end_time брони на max_extend_minutes(). Возвращает применённые минуты."""
     minutes = max_extend_minutes(order)
     if minutes < MIN_USEFUL_EXTEND_MINUTES:
         return 0

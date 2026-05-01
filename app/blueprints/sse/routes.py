@@ -1,16 +1,4 @@
-"""SSE-эндпоинты для real-time обновлений.
-
-Принцип: SSE шлёт только короткие JSON-сигналы, HTML на клиент приходит
-через обычный HTMX hx-get на партиал. Так мы не зависим от SQLAlchemy-сессии
-внутри стримящего генератора (там она уже может быть закрыта).
-
-Два потока:
-  - /sse/my-orders — студенту: события только по его заказам
-  - /sse/kds       — админу: любые order-events (новые, смена статуса)
-
-Подписчик публикует через app.services.pubsub.publish(event), event = dict
-с полями {type, order_id, status?, user_id}.
-"""
+"""SSE-эндпоинты. Шлют JSON-сигналы; HTML тянется отдельным HTMX hx-get."""
 import json
 import queue
 
@@ -24,7 +12,7 @@ sse_bp = Blueprint('sse', __name__)
 
 
 def _stream(filter_fn, event_name: str):
-    """Общий SSE-генератор. filter_fn(event) → bool: пропустить событие или нет."""
+    """SSE-генератор. filter_fn(event) → bool, отбирает события для стрима."""
     def gen():
         q = pubsub.subscribe()
         try:
@@ -58,7 +46,7 @@ def _stream(filter_fn, event_name: str):
 @login_required
 @csrf.exempt
 def my_orders_stream():
-    """Студенту — только его заказы."""
+    """Стрим событий по заказам текущего студента."""
     user_id = current_user.id
     return _stream(
         filter_fn=lambda e: e.get('user_id') == user_id,
@@ -70,7 +58,7 @@ def my_orders_stream():
 @login_required
 @csrf.exempt
 def kds_stream():
-    """Админу (KDS) — любые события по заказам: новые и смена статуса."""
+    """Стрим событий KDS для админа: order-status, order-new, reservation-status."""
     if not current_user.is_admin:
         abort(403)
     return _stream(

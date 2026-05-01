@@ -7,7 +7,7 @@ load_dotenv()
 class BaseConfig:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-замени!")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    WTF_CSRF_TIME_LIMIT = None  # токен живёт всю сессию (иначе SSE-страница умрёт через час)
+    WTF_CSRF_TIME_LIMIT = None  # токен живёт всю сессию
 
 
 class DevelopmentConfig(BaseConfig):
@@ -17,9 +17,9 @@ class DevelopmentConfig(BaseConfig):
 
 class ProductionConfig(BaseConfig):
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")  # PostgreSQL — задаётся в .env
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")  # PostgreSQL из .env
 
-    # Cookie/CSRF — работают только при HTTPS (nginx + Let's Encrypt)
+    # Cookie/CSRF только по HTTPS
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"

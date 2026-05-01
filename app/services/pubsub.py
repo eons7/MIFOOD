@@ -1,20 +1,4 @@
-"""In-memory pub/sub шина для SSE.
-
-Простая реализация без внешних брокеров — для одного процесса Flask dev-сервера.
-Каждый подписчик получает свою Queue, события рассылаются всем.
-
-Использование:
-    pubsub.publish({'type': 'order-status', 'order_id': 42, 'status': 'ready', 'user_id': 7})
-
-В SSE-обработчике:
-    q = pubsub.subscribe()
-    try:
-        while True:
-            event = q.get(timeout=25)
-            yield format_sse(event)
-    except GeneratorExit:
-        pubsub.unsubscribe(q)
-"""
+"""In-memory pub/sub шина для SSE. Один процесс, без внешних брокеров."""
 import queue
 import threading
 
@@ -38,7 +22,7 @@ def unsubscribe(q: queue.Queue) -> None:
 
 
 def publish(event: dict) -> None:
-    """Рассылает событие всем подписчикам. Не блокирует — если очередь заполнена, событие теряется."""
+    """Рассылает событие всем подписчикам. Не блокирует, при переполнении событие теряется."""
     with _lock:
         subs = list(_subscribers)
     for q in subs:

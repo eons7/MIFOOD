@@ -11,7 +11,7 @@ from app.utils.security import admin_required, audit
 
 admin_bp = Blueprint('admin', __name__)
 
-# Кухонный FSM: paid сюда не входит — это отдельная ось is_paid.
+# Кухонный FSM. Ось is_paid отдельная.
 ORDER_TRANSITIONS = {
     'pending':   ['confirmed', 'cancelled'],
     'confirmed': ['ready', 'cancelled'],
@@ -23,7 +23,7 @@ ORDER_TRANSITIONS = {
 
 
 def _orders_context(status_filter):
-    """Считает заказы и extend_info — общая логика для полной страницы и партиала."""
+    """Контекст для шаблона списка заказов: orders + extend_info + status_labels."""
     reservation_service.activate_started()
     reservation_service.complete_expired()
     order_service.expire_overdue()
@@ -48,7 +48,6 @@ def _orders_context(status_filter):
         'status_filter': status_filter,
         'transitions': ORDER_TRANSITIONS,
         'extend_info': extend_info,
-        # status_labels берётся из шаблона (set в orders.html). Дублируем для партиала.
         'status_labels': {
             'pending': 'Ожидает', 'confirmed': 'Принят', 'ready': 'Готов',
             'completed': 'Выдан', 'cancelled': 'Отменён', 'expired': 'Не забран',
@@ -66,7 +65,7 @@ def orders():
 @admin_bp.route('/orders/board', methods=['GET'])
 @admin_required
 def orders_board():
-    """Партиал доски заказов — для HTMX-рефетча по SSE-событию."""
+    """Партиал доски заказов для HTMX-рефетча по SSE."""
     ctx = _orders_context(request.args.get('status'))
     return render_template('admin/_orders_board.html', **ctx)
 
@@ -84,7 +83,6 @@ def update_order_status(id):
 
     old_status = order.status
     order.status = new_status
-    # Выдан = деньги получены: либо онлайн раньше, либо налом сейчас.
     if new_status == 'completed':
         order.is_paid = True
     db.session.commit()

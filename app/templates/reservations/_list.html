@@ -1,5 +1,5 @@
-{# Партиал списка броней студента — для HTMX-рефетча по SSE-событию. #}
-{# Запланированные (ещё не начались) — можно отменить #}
+{# Партиал списка броней студента. #}
+{# Запланированные брони. #}
 {% set scheduled = reservations|selectattr('status', 'equalto', 'scheduled')|list %}
 {% if scheduled %}
   <h2 class="h6 mifud-title mb-2">Запланированные</h2>

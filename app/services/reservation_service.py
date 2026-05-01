@@ -7,7 +7,7 @@ from app.utils.timezones import now_utc_naive
 
 
 def _publish(reservation: Reservation) -> None:
-    """Публикуем событие смены статуса брони для realtime-обновлений."""
+    """Публикует событие смены статуса брони в pubsub."""
     pubsub.publish({
         'type': 'reservation-status',
         'reservation_id': reservation.id,
@@ -17,14 +17,8 @@ def _publish(reservation: Reservation) -> None:
 
 
 def complete_expired() -> int:
-    """Помечает все активные брони с истёкшим end_time как 'completed'.
-    Вызывается лениво: при отображении списка броней и при поиске свободных
-    столов, чтобы стол освобождался автоматически по окончанию времени.
-    Возвращает кол-во обновлённых записей.
-    """
+    """scheduled/active с истёкшим end_time → completed. Возвращает кол-во записей."""
     now = now_utc_naive()
-    # И scheduled, и active с истёкшим end_time → completed
-    # (scheduled может остаться, если бронь короче, чем интервал между визитами).
     expired = Reservation.query.filter(
         Reservation.status.in_(('scheduled', 'active')),
         Reservation.end_time < now,
@@ -39,8 +33,7 @@ def complete_expired() -> int:
 
 
 def can_cancel(reservation: Reservation) -> bool:
-    """Отменить можно только запланированную бронь, до начала времени.
-    После start_time гость уже сидит за столом — отмена невозможна."""
+    """Отменить можно только бронь со статусом 'scheduled'."""
     return reservation.status == 'scheduled'
 
 
@@ -51,8 +44,7 @@ def cancel(reservation: Reservation) -> None:
 
 
 def create(user_id: int, table_id: int, order_id: int, start_time: datetime, end_time: datetime) -> Reservation:
-    """Бронь создаётся со статусом 'scheduled'. Активной станет автоматически,
-    когда наступит start_time (см. activate_started)."""
+    """Создаёт бронь со статусом 'scheduled'."""
     reservation = Reservation(
         user_id=user_id,
         table_id=table_id,
@@ -66,8 +58,7 @@ def create(user_id: int, table_id: int, order_id: int, start_time: datetime, end
 
 
 def activate_started() -> int:
-    """Переводит scheduled-брони, у которых start_time уже наступил
-    (но end_time ещё нет), в статус 'active'. Лениво."""
+    """scheduled с start_time<=now<end_time → active. Возвращает кол-во записей."""
     now = now_utc_naive()
     rows = Reservation.query.filter(
         Reservation.status == 'scheduled',

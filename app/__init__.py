@@ -13,7 +13,7 @@ _SIZE_SUFFIX_RE = re.compile(r'^(.+)_([SML])$')
 
 
 def pretty_name(name: str | None) -> str:
-    """Убирает суффикс размера: «Капучино_L» → «Капучино (L)»."""
+    """«Капучино_L» → «Капучино (L)»."""
     if not name:
         return ''
     m = _SIZE_SUFFIX_RE.match(name)
@@ -25,8 +25,7 @@ def create_app(config_name: str | None = None):
     config_name = config_name or os.getenv('FLASK_ENV', 'default')
     app.config.from_object(config_map.get(config_name, config_map['default']))
 
-    # За nginx — доверяем X-Forwarded-* заголовкам (только на проде).
-    # ВАЖНО: не включать без реального обратного прокси — иначе можно подделать IP клиента.
+    # ProxyFix включается только за реальным обратным прокси (production).
     if config_name == 'production':
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
@@ -35,25 +34,24 @@ def create_app(config_name: str | None = None):
     login_manager.init_app(app)
     csrf.init_app(app)
 
-    # Security headers (CSP/HSTS/X-Frame-Options/Referrer-Policy и пр.).
-    # На dev — без force_https, чтобы локально работало по http.
+    # Security headers: CSP, HSTS, X-Frame, Referrer-Policy.
     is_prod = (config_name == 'production')
     csp = {
         'default-src': "'self'",
         'script-src': [
             "'self'",
-            "'unsafe-inline'",  # для inline-скриптов в base.html и onclick в шаблонах
+            "'unsafe-inline'",
             'https://cdn.jsdelivr.net',
             'https://unpkg.com',
         ],
         'style-src': [
             "'self'",
-            "'unsafe-inline'",  # для bootstrap inline-стилей и style-атрибутов
+            "'unsafe-inline'",
             'https://cdn.jsdelivr.net',
         ],
         'img-src': ["'self'", 'data:', 'blob:'],
         'font-src': ["'self'", 'https://cdn.jsdelivr.net', 'data:'],
-        'connect-src': ["'self'"],  # SSE/HTMX к своему домену
+        'connect-src': ["'self'"],
         'frame-ancestors': "'none'",
         'base-uri': "'self'",
     }
@@ -71,10 +69,8 @@ def create_app(config_name: str | None = None):
     limiter.init_app(app)
 
     app.jinja_env.filters['pretty_name'] = pretty_name
-    # naive-UTC datetime → строка в локальной TZ (Europe/Moscow)
     app.jinja_env.filters['local_dt'] = format_local
 
-    # Регистрация blueprints
     from app.blueprints.auth.routes import auth_bp
     from app.blueprints.menu.routes import menu_bp
     from app.blueprints.orders.routes import orders_bp

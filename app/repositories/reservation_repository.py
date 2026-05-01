@@ -20,11 +20,7 @@ def has_conflict(table_id: int, start_time, end_time) -> bool:
 
 
 def next_after(table_id: int, after_time, exclude_id: int | None = None) -> Reservation | None:
-    """Ближайшая активная/запланированная бронь на этом столе, начинающаяся
-    в момент after_time или позже. Используется для ограничения продления:
-    нельзя продлить заказ дальше, чем до начала следующей брони.
-    Параметр exclude_id позволяет исключить текущую бронь из выборки.
-    """
+    """Ближайшая scheduled/active бронь на столе с start_time >= after_time."""
     q = Reservation.query.filter(
         Reservation.table_id == table_id,
         Reservation.status.in_(('scheduled', 'active')),

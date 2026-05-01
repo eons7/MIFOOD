@@ -9,8 +9,7 @@ from app.models.menu import Category, MenuItem
 from app.models.user import User
 from app.services.auth_service import set_password
 
-# ВАЖНО: импортируем все модели, чтобы SQLAlchemy успел зарегистрировать имена
-# до конфигурации relationship'ов.
+# Импорт моделей до конфигурации relationship'ов SQLAlchemy.
 from app.models.order import Order, OrderItem  # noqa: F401
 from app.models.reservation import Reservation, Table  # noqa: F401
 

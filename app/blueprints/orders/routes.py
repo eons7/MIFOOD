@@ -25,7 +25,7 @@ def my_orders():
 @orders_bp.route('/list', methods=['GET'])
 @login_required
 def my_orders_list():
-    """Партиал списка заказов — для HTMX-рефетча по SSE."""
+    """Партиал списка заказов для HTMX-рефетча по SSE."""
     orders = _my_orders_list(current_user.id)
     return render_template('orders/_my_orders_list.html', orders=orders)
 
@@ -41,7 +41,6 @@ def create():
             return redirect(url_for('menu.index'))
 
         items = MenuItem.query.filter(MenuItem.id.in_([int(k) for k in cart.keys()])).all()
-        # Лёгкие cart-line объекты для шаблона, чтобы не плодить OrderItem в сессии SQLAlchemy.
         order_items = [
             type('CartLine', (), {'menu_item': item, 'quantity': cart[str(item.id)]})()
             for item in items
@@ -52,7 +51,6 @@ def create():
             'orders/create.html',
             order_items=order_items,
             total_price=total_price,
-            # Если пользователь вернулся с шага выбора стола — восстанавливаем введённые поля.
             draft=draft,
         )
 
@@ -76,10 +74,7 @@ def create():
         return redirect(url_for('orders.create'))
 
     if reserve:
-        # Заказ ещё НЕ создаём — кладём черновик в сессию. Финализация будет
-        # в reservations.select_table POST (вместе с бронью). Это решает
-        # проблему «призрачных» pending-заказов, если юзер уйдёт со страницы
-        # выбора стола.
+        # Заказ создаётся в reservations.select_table POST вместе с бронью; здесь только draft.
         session['order_draft'] = {
             'cart': dict(cart),
             'pickup_time': pickup_time,
@@ -87,7 +82,6 @@ def create():
         }
         return redirect(url_for('reservations.select_table'))
 
-    # Без брони — старый прямой путь: создаём заказ финально и кидаем на статус.
     order = Order(user_id=current_user.id, pickup_time=pickup_dt, comment=comment, status='pending')
     db.session.add(order)
     db.session.flush()
@@ -128,7 +122,7 @@ def status(id):
 @orders_bp.route('/<int:id>/status-block', methods=['GET'])
 @login_required
 def status_block(id):
-    """Партиал шкалы статуса — для HTMX-рефетча по SSE-событию."""
+    """Партиал шкалы статуса для HTMX-рефетча по SSE."""
     order = order_repository.get_by_id(id)
     if order is None:
         abort(404)

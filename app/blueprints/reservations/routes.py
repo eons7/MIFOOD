@@ -12,15 +12,13 @@ from app.utils.timezones import parse_local_to_utc
 
 reservations_bp = Blueprint('reservations', __name__)
 
-# Допустимые длительности брони (минуты). Должно совпадать со списком в шаблоне.
+# Допустимые длительности брони (минуты). Дублируется в select_table.html.
 ALLOWED_DURATIONS = (5, 10, 15, 20, 25, 30, 35, 40, 45)
 DEFAULT_DURATION = 45
 
 
 def _tables_for_duration(pickup_dt, duration: int):
-    """Делит активные столы на свободные/занятые с учётом конкретной длительности.
-    Используется и при первом GET, и при HTMX-перерисовке после смены duration.
-    """
+    """Делит активные столы на (free, busy) для окна [pickup_dt, pickup_dt+duration]."""
     end = pickup_dt + timedelta(minutes=duration)
     tables = Table.query.filter_by(is_active=True).order_by(Table.number).all()
     free, busy = [], []
@@ -35,8 +33,7 @@ def _tables_for_duration(pickup_dt, duration: int):
 @reservations_bp.route('/select-table', methods=['GET', 'POST'])
 @login_required
 def select_table():
-    """Шаг 2 оформления заказа с бронью. Заказ ещё НЕ создан в БД —
-    данные лежат в session['order_draft']. Здесь и финализируем."""
+    """Шаг 2 оформления заказа с бронью. Финализирует draft из session в Order + Reservation."""
     draft = session.get('order_draft')
     if not draft:
         flash('Сначала оформите заказ', 'warning')
@@ -50,11 +47,9 @@ def select_table():
         return redirect(url_for('orders.create'))
 
     if request.method == 'GET':
-        # Освобождаем столы, у которых бронь уже истекла
         reservation_service.activate_started()
         reservation_service.complete_expired()
 
-        # Собираем «лёгкий» вьюхи объект с теми полями, что ждёт шаблон
         cart = draft.get('cart', {})
         items = MenuItem.query.filter(MenuItem.id.in_([int(k) for k in cart.keys()])).all()
         total_price = sum(item.price * cart[str(item.id)] for item in items)
@@ -88,7 +83,6 @@ def select_table():
     if duration not in ALLOWED_DURATIONS:
         duration = DEFAULT_DURATION
 
-    # Заранее проверяем конфликт по столу — чтобы не создавать заказ зря, если стол только что заняли.
     if action == 'confirm':
         if not table_id:
             flash('Выберите стол или нажмите «Пропустить бронирование»', 'danger')
@@ -98,7 +92,6 @@ def select_table():
             flash('Стол уже занят, выберите другой', 'danger')
             return redirect(url_for('reservations.select_table'))
 
-    # Создаём заказ
     order = Order(
         user_id=current_user.id,
         pickup_time=pickup_dt,
@@ -121,8 +114,6 @@ def select_table():
             start_time=pickup_dt,
             end_time=end_time,
         )
-        # reservation_service.create сам делает commit, но Order уже flushed —
-        # на тот же commit уйдёт.
         flash('Стол забронирован!', 'success')
     else:
         db.session.commit()
@@ -147,9 +138,7 @@ def _user_reservations(user_id):
 @reservations_bp.route('/tables-list', methods=['GET'])
 @login_required
 def tables_list():
-    """Партиал списка столов — HTMX-рефетч при смене длительности на странице
-    выбора стола. Берёт pickup_time из текущего черновика заказа в session.
-    """
+    """Партиал списка столов для HTMX-рефетча при смене duration. pickup_time из draft в session."""
     draft = session.get('order_draft')
     if not draft:
         abort(400)
@@ -182,7 +171,7 @@ def index():
 @reservations_bp.route('/list', methods=['GET'])
 @login_required
 def list_partial():
-    """Партиал списка броней — для HTMX-рефетча по SSE."""
+    """Партиал списка броней для HTMX-рефетча по SSE."""
     reservations = _user_reservations(current_user.id)
     return render_template('reservations/_list.html', reservations=reservations)
 
