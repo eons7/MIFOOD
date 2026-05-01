@@ -35,4 +35,4 @@ ENV FLASK_APP=run.py
 ENV FLASK_ENV=production
 
 # Запускаем приложение
-CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
+CMD ["python", "run.py"]
