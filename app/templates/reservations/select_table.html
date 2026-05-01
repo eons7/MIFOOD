@@ -18,70 +18,42 @@
     </div>
 
     <h1 class="h5 mifud-title">Выберите стол</h1>
-    <p class="text-muted small mb-1">Заказ #{{ order.id }}&nbsp;&middot;&nbsp;Время получения {{ order.pickup_time.strftime('%H:%M') }}</p>
-
-    {% if not free_tables %}
-      <div class="alert alert-warning">
-        {% if busy_tables %}
-          На выбранное время все столы заняты. Попробуйте пропустить бронирование или оформите заказ на другое время.
-        {% else %}
-          В столовой пока нет ни одного стола. Обратитесь к сотруднику столовой.
-        {% endif %}
-      </div>
-    {% endif %}
+    <p class="text-muted small mb-1">Время получения {{ pickup_time | local_dt('%H:%M') }}&nbsp;&middot;&nbsp;Сумма {{ total_price|int }} ₽</p>
+    <p class="text-muted small mb-1">Если уйдёте со страницы — заказ не сохранится. Можно вернуться назад и поправить состав.</p>
 
     <form method="post" action="{{ url_for('reservations.select_table') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      <input type="hidden" name="order_id" value="{{ order.id }}" />
-
-      <div class="d-grid gap-2 mb-4">
-        {% for table in free_tables %}
-          <label class="mifud-table-card mifud-table-card--selectable">
-            <input type="radio" name="table_id" value="{{ table.id }}" class="visually-hidden" required />
-            <div class="d-flex align-items-center justify-content-between">
-              <div>
-                <span class="fw-800 fs-5">№{{ table.number }}</span><br />
-                <span class="small text-muted">{{ table.seats }} места</span>
-              </div>
-              <span class="small fw-bold text-success">свободен</span>
-            </div>
-          </label>
-        {% endfor %}
-        {% for table in busy_tables %}
-          <div class="mifud-table-card is-busy">
-            <div class="d-flex align-items-center justify-content-between">
-              <div>
-                <span class="fw-800 fs-5">№{{ table.number }}</span><br />
-                <span class="small text-muted">{{ table.seats }} места</span>
-              </div>
-              <span class="small fw-bold text-primary">занят</span>
-            </div>
-          </div>
-        {% endfor %}
-        {% if not free_tables and not busy_tables %}
-          <div class="text-center text-muted py-3">Нет столов</div>
-        {% endif %}
-      </div>
-
-      <div class="mifud-card p-3 mb-3">
-        <h2 class="h6 fw-bold mb-2">Ваш заказ #{{ order.id }}</h2>
-        <div class="small text-muted">Время получения: {{ order.pickup_time.strftime('%H:%M') }}</div>
-        <div class="small text-muted">Итого: {{ order.total_price|int }} ₽</div>
-      </div>
 
       <div class="mb-4">
         <label class="fw-bold mb-1" for="duration">Продолжительность (мин):</label>
-        <select id="duration" name="duration" class="form-select mifud-input" required>
-          {% for m in [5, 10, 15, 20, 25, 30, 35, 40, 45] %}
-            <option value="{{ m }}" {% if m == 45 %}selected{% endif %}>{{ m }} мин</option>
+        <select id="duration" name="duration" class="form-select mifud-input" required
+                hx-get="{{ url_for('reservations.tables_list') }}"
+                hx-trigger="change"
+                hx-target="#tables-list"
+                hx-swap="innerHTML">
+          {% for m in durations %}
+            <option value="{{ m }}" {% if m == duration %}selected{% endif %}>{{ m }} мин</option>
           {% endfor %}
         </select>
       </div>
 
+      <div id="tables-list" class="d-grid gap-2 mb-4">
+        {% include 'reservations/_tables_list.html' %}
+      </div>
+
+      <div class="mifud-card p-3 mb-3">
+        <h2 class="h6 fw-bold mb-2">Ваш заказ</h2>
+        <div class="small text-muted">Время получения: {{ pickup_time | local_dt('%H:%M') }}</div>
+        <div class="small text-muted">Итого: {{ total_price|int }} ₽</div>
+      </div>
+
       <div class="d-grid gap-2">
-        <button type="submit" class="btn mifud-btn-primary btn-lg" {% if not free_tables %}disabled{% endif %}>ПОДТВЕРДИТЬ БРОНЬ →</button>
-        <a href="{{ url_for('orders.status', id=order.id) }}" class="btn btn-outline-secondary text-center fw-bold">
+        <button type="submit" name="action" value="confirm" class="btn mifud-btn-primary btn-lg">ПОДТВЕРДИТЬ БРОНЬ →</button>
+        <button type="submit" name="action" value="skip" formnovalidate class="btn btn-outline-secondary fw-bold">
           ПРОПУСТИТЬ БРОНИРОВАНИЕ →
+        </button>
+        <a href="{{ url_for('orders.create') }}" class="btn btn-link text-decoration-none small text-muted">
+          ← Изменить состав заказа
         </a>
       </div>
     </form>

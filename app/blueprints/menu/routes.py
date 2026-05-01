@@ -11,6 +11,23 @@ menu_bp = Blueprint('menu', __name__)
 _COFFEE_SUFFIX_RE = re.compile(r'^(.+)_([SML])$')
 _SIZE_ORDER = {'S': 0, 'M': 1, 'L': 2}
 
+# Порядок категорий на витрине (без фильтра): чем меньше число — тем выше.
+# Категории, которых нет в этом словаре, едут в конец в алфавитном порядке.
+_CATEGORY_ORDER = {
+    'Сэндвичи':     0,
+    'Первые блюда': 1,
+    'Напитки':      2,
+    'Добавки':      3,
+}
+
+
+def _sort_items(items: list) -> list:
+    """Сортирует позиции меню: сначала по приоритету категории, потом по имени."""
+    def key(it):
+        cat_name = it.category.name if it.category else ''
+        return (_CATEGORY_ORDER.get(cat_name, 99), cat_name, it.name)
+    return sorted(items, key=key)
+
 
 def _cart_total(cart: dict) -> float:
     if not cart:
@@ -72,7 +89,7 @@ def index():
     if category_id:
         query = query.filter_by(category_id=category_id)
 
-    items = query.order_by(MenuItem.name).all()
+    items = _sort_items(query.all())
     # Поиск фильтруем в Python — SQLite LIKE/LOWER не case-insensitive для кириллицы.
     if q:
         ql = q.lower()
@@ -103,7 +120,7 @@ def items():
     if category_id:
         query = query.filter_by(category_id=category_id)
 
-    items = query.order_by(MenuItem.name).all()
+    items = _sort_items(query.all())
     # Поиск фильтруем в Python — SQLite LIKE/LOWER не case-insensitive для кириллицы.
     if q:
         ql = q.lower()

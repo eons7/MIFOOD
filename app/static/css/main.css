@@ -130,6 +130,68 @@ body {
   color: var(--mifud-orange);
 }
 
+/* Оранжевая кнопка (контурная и сплошная) — для важных, но не основных действий.
+   Переопределяем bootstrap-овские CSS-переменные, иначе .btn перетирает color. */
+.btn.mifud-btn-accent {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--mifud-orange);
+  --bs-btn-border-color: var(--mifud-orange);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--mifud-orange-700);
+  --bs-btn-hover-border-color: var(--mifud-orange-700);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--mifud-orange-700);
+  --bs-btn-active-border-color: var(--mifud-orange-700);
+  color: #fff;
+  background-color: var(--mifud-orange);
+  border: 1px solid var(--mifud-orange);
+  font-weight: 700;
+}
+.btn.mifud-btn-accent:hover,
+.btn.mifud-btn-accent:focus,
+.btn.mifud-btn-accent:active {
+  color: #fff;
+  background-color: var(--mifud-orange-700);
+  border-color: var(--mifud-orange-700);
+}
+.btn.mifud-btn-outline-accent {
+  --bs-btn-color: var(--mifud-orange);
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: var(--mifud-orange);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--mifud-orange);
+  --bs-btn-hover-border-color: var(--mifud-orange);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--mifud-orange-700);
+  --bs-btn-active-border-color: var(--mifud-orange-700);
+  /* Прямые свойства — страховка от случаев, когда bs-переменные
+     не подхватываются (например после HTMX-swap или :focus-стейтов). */
+  color: var(--mifud-orange);
+  border: 1px solid var(--mifud-orange);
+  background-color: transparent;
+  font-weight: 700;
+}
+.btn.mifud-btn-outline-accent:hover,
+.btn.mifud-btn-outline-accent:focus,
+.btn.mifud-btn-outline-accent:active {
+  color: #fff;
+  background-color: var(--mifud-orange);
+  border-color: var(--mifud-orange);
+}
+
+/* Бейдж в фирменном оранжевом — замена bootstrap text-bg-warning */
+.badge.mifud-badge-accent {
+  background-color: var(--mifud-orange);
+  color: #fff;
+}
+
+/* Алерт в фирменном оранжевом — замена bootstrap alert-warning */
+.alert.mifud-alert-accent {
+  background: rgba(245, 155, 35, 0.12);
+  border: 1px solid var(--mifud-orange);
+  color: var(--mifud-orange-700);
+}
+
 /* Поля ввода: оранжевый бордер/фокус как на логин/регистрация */
 .form-control.mifud-input,
 .form-select.mifud-input {

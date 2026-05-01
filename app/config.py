@@ -27,8 +27,15 @@ class ProductionConfig(BaseConfig):
     PREFERRED_URL_SCHEME = "https"
 
 
+class TestingConfig(BaseConfig):
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    WTF_CSRF_ENABLED = False
+
+
 config = {
     "development": DevelopmentConfig,
     "production":  ProductionConfig,
+    "testing":     TestingConfig,
     "default":     DevelopmentConfig,
 }

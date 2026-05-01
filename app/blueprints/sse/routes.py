@@ -1,15 +1,20 @@
-"""SSE-эндпоинты для real-time обновлений у студента.
+"""SSE-эндпоинты для real-time обновлений.
 
-Один stream-обработчик на пользователя. События публикуются из админки
-после смены статуса (admin.update_order_status) — клиент получает
-HTML-фрагмент партиала статуса и Bootstrap-toast'ит.
+Принцип: SSE шлёт только короткие JSON-сигналы, HTML на клиент приходит
+через обычный HTMX hx-get на партиал. Так мы не зависим от SQLAlchemy-сессии
+внутри стримящего генератора (там она уже может быть закрыта).
 
-Подключено: app/__init__.py register_blueprint(sse_bp, url_prefix='/sse').
+Два потока:
+  - /sse/my-orders — студенту: события только по его заказам
+  - /sse/kds       — админу: любые order-events (новые, смена статуса)
+
+Подписчик публикует через app.services.pubsub.publish(event), event = dict
+с полями {type, order_id, status?, user_id}.
 """
 import json
 import queue
 
-from flask import Blueprint, Response, render_template, stream_with_context
+from flask import Blueprint, Response, abort, stream_with_context
 from flask_login import login_required, current_user
 
 from app.extensions import csrf
@@ -18,22 +23,11 @@ from app.services import pubsub
 sse_bp = Blueprint('sse', __name__)
 
 
-@sse_bp.route('/my-orders')
-@login_required
-@csrf.exempt
-def my_orders_stream():
-    """SSE-стрим: события только этого пользователя.
-
-    Шлёт два типа событий:
-      - 'order-status' — HTML-партиал статуса (для htmx sse-swap)
-      - 'order-ready'  — JSON {order_id, status} (для JS-toast'а)
-    """
-    user_id = current_user.id
-
+def _stream(filter_fn, event_name: str):
+    """Общий SSE-генератор. filter_fn(event) → bool: пропустить событие или нет."""
     def gen():
         q = pubsub.subscribe()
         try:
-            # Сразу отправим heartbeat чтобы соединение точно открылось
             yield ': connected\n\n'
             while True:
                 try:
@@ -41,24 +35,14 @@ def my_orders_stream():
                 except queue.Empty:
                     yield ': keepalive\n\n'
                     continue
-
-                if event.get('user_id') != user_id:
+                if not filter_fn(event):
                     continue
-
-                if event.get('type') == 'order-status':
-                    # Партиал — для htmx
-                    from app.repositories import order_repository
-                    order = order_repository.get_by_id(event['order_id'])
-                    if order is None:
-                        continue
-                    html = render_template('orders/_status_block.html', order=order)
-                    # SSE-формат: одно событие, многострочный data: с префиксом каждой строки
-                    data_lines = '\n'.join('data: ' + line for line in html.splitlines())
-                    yield f'event: order-status\n{data_lines}\n\n'
-
-                    # Дополнительно — JSON для тоста (отдельным событием)
-                    payload = json.dumps({'order_id': event['order_id'], 'status': event['status']})
-                    yield f'event: order-toast\ndata: {payload}\n\n'
+                payload = json.dumps({
+                    'type': event.get('type'),
+                    'order_id': event.get('order_id'),
+                    'status': event.get('status'),
+                })
+                yield f'event: {event_name}\ndata: {payload}\n\n'
         except GeneratorExit:
             pass
         finally:
@@ -68,3 +52,30 @@ def my_orders_stream():
     response.headers['Cache-Control'] = 'no-cache'
     response.headers['X-Accel-Buffering'] = 'no'
     return response
+
+
+@sse_bp.route('/my-orders')
+@login_required
+@csrf.exempt
+def my_orders_stream():
+    """Студенту — только его заказы."""
+    user_id = current_user.id
+    return _stream(
+        filter_fn=lambda e: e.get('user_id') == user_id,
+        event_name='my-order-update',
+    )
+
+
+@sse_bp.route('/kds')
+@login_required
+@csrf.exempt
+def kds_stream():
+    """Админу (KDS) — любые события по заказам: новые и смена статуса."""
+    if not current_user.is_admin:
+        abort(403)
+    return _stream(
+        filter_fn=lambda e: e.get('type') in (
+            'order-status', 'order-new', 'reservation-status',
+        ),
+        event_name='kds-update',
+    )

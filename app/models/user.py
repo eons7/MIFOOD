@@ -1,5 +1,5 @@
-from datetime import datetime
 from app.extensions import db
+from app.utils.timezones import now_utc_naive
 from flask_login import UserMixin
 
 
@@ -11,7 +11,7 @@ class User(UserMixin, db.Model):
     email         = db.Column(db.String(120), nullable=False, unique=True)
     password_hash = db.Column(db.String(256), nullable=False)
     is_admin      = db.Column(db.Boolean,     default=False)
-    created_at    = db.Column(db.DateTime,    default=datetime.utcnow)
+    created_at    = db.Column(db.DateTime,    default=now_utc_naive)
 
     orders       = db.relationship('Order',       backref='student', lazy=True)
     reservations = db.relationship('Reservation', backref='student', lazy=True)

@@ -1,10 +1,18 @@
-{# Partial: бейдж статуса заказа #}
+{# Partial: бейдж кухонного статуса + отдельный бейдж оплаты #}
 {% set badge_map = {
-  'pending':   ('Ожидает',   'warning'),
+  'pending':   ('Ожидает',   'mifud-accent'),
   'confirmed': ('Принят',    'primary'),
   'ready':     ('Готов',     'success'),
   'completed': ('Выдан',     'secondary'),
-  'cancelled': ('Отменён',   'danger')
+  'cancelled': ('Отменён',   'danger'),
+  'expired':   ('Не забран', 'dark')
 } %}
 {% set label, color = badge_map.get(order.status, ('—', 'secondary')) %}
-<span class="badge text-bg-{{ color }}">{{ label }}</span>
+{% if color == 'mifud-accent' %}
+  <span class="badge mifud-badge-accent">{{ label }}</span>
+{% else %}
+  <span class="badge text-bg-{{ color }}">{{ label }}</span>
+{% endif %}
+{% if order.is_paid and order.status not in ('cancelled', 'expired') %}
+  <span class="badge text-bg-success ms-1">Оплачен</span>
+{% endif %}

@@ -1,5 +1,5 @@
-from datetime import datetime
 from app.extensions import db
+from app.utils.timezones import now_utc_naive
 
 
 class Table(db.Model):
@@ -25,12 +25,13 @@ class Reservation(db.Model):
     order_id   = db.Column(db.Integer,    db.ForeignKey('orders.id'), nullable=False)
     start_time = db.Column(db.DateTime,   nullable=False)
     end_time   = db.Column(db.DateTime,   nullable=False)
-    status     = db.Column(db.String(20), nullable=False, default='active')
-    # Возможные значения status:
-    # active    — действующая бронь
-    # cancelled — отменена
-    # completed — завершена
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    status     = db.Column(db.String(20), nullable=False, default='scheduled')
+    # Возможные значения status (FSM):
+    # scheduled — запланирована, до наступления start_time
+    # active    — текущая (start_time ≤ now < end_time)
+    # completed — завершена (end_time ≤ now)
+    # cancelled — отменена пользователем (только из scheduled)
+    created_at = db.Column(db.DateTime, nullable=False, default=now_utc_naive)
 
     def __repr__(self):
         return f'<Reservation user={self.user_id} table={self.table_id} [{self.status}]>'

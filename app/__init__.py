@@ -4,7 +4,9 @@ import re
 from flask import Flask, make_response
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from app.extensions import db, migrate, login_manager, csrf
+from app.utils.timezones import format_local
+
+from app.extensions import db, migrate, login_manager, csrf, talisman, limiter
 from app.config import config as config_map
 
 _SIZE_SUFFIX_RE = re.compile(r'^(.+)_([SML])$')
@@ -33,7 +35,44 @@ def create_app(config_name: str | None = None):
     login_manager.init_app(app)
     csrf.init_app(app)
 
+    # Security headers (CSP/HSTS/X-Frame-Options/Referrer-Policy и пр.).
+    # На dev — без force_https, чтобы локально работало по http.
+    is_prod = (config_name == 'production')
+    csp = {
+        'default-src': "'self'",
+        'script-src': [
+            "'self'",
+            "'unsafe-inline'",  # для inline-скриптов в base.html и onclick в шаблонах
+            'https://cdn.jsdelivr.net',
+            'https://unpkg.com',
+        ],
+        'style-src': [
+            "'self'",
+            "'unsafe-inline'",  # для bootstrap inline-стилей и style-атрибутов
+            'https://cdn.jsdelivr.net',
+        ],
+        'img-src': ["'self'", 'data:', 'blob:'],
+        'font-src': ["'self'", 'https://cdn.jsdelivr.net', 'data:'],
+        'connect-src': ["'self'"],  # SSE/HTMX к своему домену
+        'frame-ancestors': "'none'",
+        'base-uri': "'self'",
+    }
+    talisman.init_app(
+        app,
+        force_https=is_prod,
+        strict_transport_security=is_prod,
+        session_cookie_secure=is_prod,
+        content_security_policy=csp,
+        content_security_policy_nonce_in=[],
+        referrer_policy='strict-origin-when-cross-origin',
+        frame_options='DENY',
+    )
+
+    limiter.init_app(app)
+
     app.jinja_env.filters['pretty_name'] = pretty_name
+    # naive-UTC datetime → строка в локальной TZ (Europe/Moscow)
+    app.jinja_env.filters['local_dt'] = format_local
 
     # Регистрация blueprints
     from app.blueprints.auth.routes import auth_bp

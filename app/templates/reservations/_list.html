@@ -1,0 +1,78 @@
+{# Партиал списка броней студента — для HTMX-рефетча по SSE-событию. #}
+{# Запланированные (ещё не начались) — можно отменить #}
+{% set scheduled = reservations|selectattr('status', 'equalto', 'scheduled')|list %}
+{% if scheduled %}
+  <h2 class="h6 mifud-title mb-2">Запланированные</h2>
+  <div class="d-grid gap-3 mb-4">
+    {% for r in scheduled %}
+      <div class="mifud-card p-3">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <span class="fw-800">Стол №{{ r.table.number }}</span>
+          <span class="badge text-bg-info">запланирована</span>
+        </div>
+        <div class="small text-muted">{{ r.table.seats }} места</div>
+        <div class="small text-muted">{{ r.start_time | local_dt('%d.%m.%Y') }}</div>
+        <div class="fw-bold text-primary">
+          {{ r.start_time | local_dt('%H:%M') }}–{{ r.end_time | local_dt('%H:%M') }}
+        </div>
+        <div class="small text-muted mb-2">К заказу #{{ r.order_id }}</div>
+        <form method="post" action="/reservations/{{ r.id }}/cancel">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button type="submit" class="btn btn-outline-danger btn-sm w-100">ОТМЕНИТЬ БРОНЬ</button>
+        </form>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{# Активные сейчас — отменить нельзя, гость уже сидит #}
+{% set active = reservations|selectattr('status', 'equalto', 'active')|list %}
+{% if active %}
+  <h2 class="h6 mifud-title mb-2">Сейчас активна</h2>
+  <div class="d-grid gap-3 mb-4">
+    {% for r in active %}
+      <div class="mifud-card p-3">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <span class="fw-800">Стол №{{ r.table.number }}</span>
+          <span class="badge text-bg-success">активна</span>
+        </div>
+        <div class="small text-muted">{{ r.table.seats }} места</div>
+        <div class="fw-bold text-primary">
+          до {{ r.end_time | local_dt('%H:%M') }}
+        </div>
+        <div class="small text-muted">К заказу #{{ r.order_id }}</div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{# История #}
+{% set history = reservations|rejectattr('status', 'equalto', 'active')|rejectattr('status', 'equalto', 'scheduled')|list %}
+{% if history %}
+  <h2 class="h6 mifud-title mb-2">История</h2>
+  <div class="d-grid gap-2">
+    {% for r in history %}
+      <div class="mifud-card p-3" style="opacity: 0.7;">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <span class="fw-800">Стол №{{ r.table.number }}</span>
+          {% if r.status == 'completed' %}
+            <span class="badge text-bg-secondary">завершена</span>
+          {% elif r.status == 'cancelled' %}
+            <span class="badge text-bg-danger">отменена</span>
+          {% endif %}
+        </div>
+        <div class="small text-muted">
+          {{ r.start_time | local_dt('%d.%m.%Y') }} &middot; {{ r.start_time | local_dt('%H:%M') }}–{{ r.end_time | local_dt('%H:%M') }}
+        </div>
+        <div class="small text-muted">К заказу #{{ r.order_id }}</div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{% if not reservations %}
+  <div class="text-center text-muted py-5">
+    <p class="mb-2">У вас пока нет бронирований</p>
+    <a href="/menu" class="btn mifud-btn-primary">ПЕРЕЙТИ В МЕНЮ →</a>
+  </div>
+{% endif %}

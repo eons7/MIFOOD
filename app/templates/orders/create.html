@@ -73,6 +73,7 @@
           name="pickup_time"
           type="datetime-local"
           class="form-control mifud-input"
+          value="{{ draft.pickup_time if draft else '' }}"
           required
         />
       </div>
@@ -86,12 +87,12 @@
           rows="3"
           class="form-control mifud-input"
           placeholder="Например: без лука"
-        ></textarea>
+        >{{ draft.comment if draft else '' }}</textarea>
       </div>
 
       {# Чекбокс бронирования #}
       <div class="d-flex align-items-start gap-2 mb-3">
-        <input type="checkbox" id="reserve_table" name="reserve_table" class="form-check-input mt-1" />
+        <input type="checkbox" id="reserve_table" name="reserve_table" class="form-check-input mt-1" {% if draft %}checked{% endif %} />
         <label for="reserve_table">
           <span class="fw-bold">Забронировать стол</span>
           <br />

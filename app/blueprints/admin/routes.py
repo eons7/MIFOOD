@@ -1,49 +1,79 @@
 import os
 import uuid
+from datetime import timedelta
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
-from flask_login import login_required, current_user
-
 from app.extensions import db
 from app.models import MenuItem, Category, Order, Table
 from app.repositories import menu_repository, order_repository
-from app.services import menu_service, pubsub
+from app.services import menu_service, order_service, pubsub, reservation_service
+from app.utils.security import admin_required, audit
 
 admin_bp = Blueprint('admin', __name__)
 
-# FSM переходов: из какого статуса в какой можно перейти
+# Кухонный FSM: paid сюда не входит — это отдельная ось is_paid.
 ORDER_TRANSITIONS = {
-    'pending':   ['confirmed', 'paid', 'cancelled'],
-    'paid':      ['confirmed', 'cancelled'],
+    'pending':   ['confirmed', 'cancelled'],
     'confirmed': ['ready', 'cancelled'],
     'ready':     ['completed'],
     'completed': [],
     'cancelled': [],
+    'expired':   [],
 }
 
 
-def check_admin():
-    if not current_user.is_admin:
-        abort(403)
+def _orders_context(status_filter):
+    """Считает заказы и extend_info — общая логика для полной страницы и партиала."""
+    reservation_service.activate_started()
+    reservation_service.complete_expired()
+    order_service.expire_overdue()
 
-
-@admin_bp.route('/orders', methods=['GET'])
-@login_required
-def orders():
-    check_admin()
-    status_filter = request.args.get('status')
     query = Order.query.order_by(Order.pickup_time.asc())
     if status_filter:
         query = query.filter_by(status=status_filter)
     else:
-        query = query.filter(Order.status.in_(['pending', 'confirmed', 'ready', 'paid']))
-    return render_template('admin/orders.html', orders=query.all(), status_filter=status_filter, transitions=ORDER_TRANSITIONS)
+        query = query.filter(Order.status.in_(['pending', 'confirmed', 'ready']))
+    orders = query.all()
+
+    extend_info = {}
+    for o in orders:
+        if order_service.can_extend(o):
+            mins = order_service.max_extend_minutes(o)
+            extend_info[o.id] = {
+                'minutes': mins,
+                'until': (o.pickup_time + timedelta(minutes=mins)).strftime('%H:%M'),
+            }
+    return {
+        'orders': orders,
+        'status_filter': status_filter,
+        'transitions': ORDER_TRANSITIONS,
+        'extend_info': extend_info,
+        # status_labels берётся из шаблона (set в orders.html). Дублируем для партиала.
+        'status_labels': {
+            'pending': 'Ожидает', 'confirmed': 'Принят', 'ready': 'Готов',
+            'completed': 'Выдан', 'cancelled': 'Отменён', 'expired': 'Не забран',
+        },
+    }
+
+
+@admin_bp.route('/orders', methods=['GET'])
+@admin_required
+def orders():
+    ctx = _orders_context(request.args.get('status'))
+    return render_template('admin/orders.html', **ctx)
+
+
+@admin_bp.route('/orders/board', methods=['GET'])
+@admin_required
+def orders_board():
+    """Партиал доски заказов — для HTMX-рефетча по SSE-событию."""
+    ctx = _orders_context(request.args.get('status'))
+    return render_template('admin/_orders_board.html', **ctx)
 
 
 @admin_bp.route('/orders/<int:id>/status', methods=['POST'])
-@login_required
+@admin_required
 def update_order_status(id):
-    check_admin()
     new_status = request.form.get('status')
     order = order_repository.get_by_id(id)
     if order is None:
@@ -52,8 +82,13 @@ def update_order_status(id):
         flash('Недопустимый переход статуса', 'danger')
         return redirect(url_for('admin.orders'))
 
+    old_status = order.status
     order.status = new_status
+    # Выдан = деньги получены: либо онлайн раньше, либо налом сейчас.
+    if new_status == 'completed':
+        order.is_paid = True
     db.session.commit()
+    audit('order.status_change', order_id=order.id, old=old_status, new=new_status)
     pubsub.publish({
         'type': 'order-status',
         'order_id': order.id,
@@ -63,10 +98,34 @@ def update_order_status(id):
     return redirect(url_for('admin.orders'))
 
 
+@admin_bp.route('/orders/<int:id>/extend', methods=['POST'])
+@admin_required
+def extend_order(id):
+    order = order_repository.get_by_id(id)
+    if order is None:
+        abort(404)
+    if not order_service.can_extend(order):
+        flash('Нельзя продлить: нет брони или следующая бронь слишком близко.', 'danger')
+        return redirect(url_for('admin.orders'))
+
+    minutes = order_service.extend(order)
+    if minutes == 0:
+        flash('Не удалось продлить — следующая бронь начинается слишком скоро.', 'danger')
+    else:
+        flash(f'Продлено на {minutes} мин (до {order.pickup_time.strftime("%H:%M")}).', 'success')
+        audit('order.extend', order_id=order.id, minutes=minutes)
+        pubsub.publish({
+            'type': 'order-status',
+            'order_id': order.id,
+            'status': order.status,
+            'user_id': order.user_id,
+        })
+    return redirect(url_for('admin.orders'))
+
+
 @admin_bp.route('/menu', methods=['GET'])
-@login_required
+@admin_required
 def menu_list():
-    check_admin()
     availability = request.args.get('availability')
     category_id = request.args.get('category_id', type=int)
     query = MenuItem.query
@@ -88,9 +147,8 @@ def menu_list():
 
 
 @admin_bp.route('/menu/add', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def add_item():
-    check_admin()
     if request.method == 'GET':
         return render_template('admin/menu_add.html', categories=Category.query.order_by(Category.name).all())
 
@@ -120,21 +178,20 @@ def add_item():
 
 
 @admin_bp.route('/menu/<int:id>/toggle', methods=['POST'])
-@login_required
+@admin_required
 def toggle_item(id):
-    check_admin()
     item = menu_repository.get_item_by_id(id)
     if item is None:
         abort(404)
     menu_service.toggle_availability(item)
+    audit('menu.toggle', item_id=item.id, available=item.is_available)
     flash('Блюдо возвращено в меню' if item.is_available else 'Блюдо скрыто', 'info')
     return redirect(url_for('admin.menu_list'))
 
 
 @admin_bp.route('/menu/<int:id>/edit', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def edit_item(id):
-    check_admin()
     item = menu_repository.get_item_by_id(id)
     if item is None:
         abort(404)
@@ -158,9 +215,8 @@ def edit_item(id):
 
 
 @admin_bp.route('/tables', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def tables():
-    check_admin()
     if request.method == 'POST':
         number = request.form.get('number', type=int)
         seats = request.form.get('seats', type=int)
@@ -180,14 +236,14 @@ def tables():
 
 
 @admin_bp.route('/tables/<int:id>/toggle', methods=['POST'])
-@login_required
+@admin_required
 def toggle_table(id):
-    check_admin()
     table = Table.query.get(id)
     if table is None:
         abort(404)
     table.is_active = not table.is_active
     db.session.commit()
+    audit('table.toggle', table_id=table.id, active=table.is_active)
     flash(
         f'Стол №{table.number} {"активирован" if table.is_active else "скрыт"}',
         'info',

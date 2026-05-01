@@ -18,8 +18,8 @@
     </div>
 
     <h1 class="h5 mifud-title">Выберите стол</h1>
-    <p class="text-muted small mb-1">Заказ #{{ order.id }}&nbsp;&middot;&nbsp;Время получения {{ order.pickup_time.strftime('%H:%M') }}</p>
-    <p class="fw-bold mb-3">Столы на {{ order.pickup_time.strftime('%H:%M') }}</p>
+    <p class="text-muted small mb-1">Заказ #{{ order.id }}&nbsp;&middot;&nbsp;Время получения {{ order.pickup_time | local_dt('%H:%M') }}</p>
+    <p class="fw-bold mb-3">Столы на {{ order.pickup_time | local_dt('%H:%M') }}</p>
 
     <form method="post" action="/orders/{{ order.id }}/select_table">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -31,7 +31,7 @@
       {# Информация о выбранном заказе #}
       <div class="mifud-card p-3 mb-3">
         <h2 class="h6 fw-bold mb-2">Ваш заказ #{{ order.id }}</h2>
-        <div class="small text-muted">Время получения: {{ order.pickup_time.strftime('%H:%M') }}</div>
+        <div class="small text-muted">Время получения: {{ order.pickup_time | local_dt('%H:%M') }}</div>
         <div class="small text-muted">Итого: {{ order.total_price|int }} ₽</div>
       </div>
 

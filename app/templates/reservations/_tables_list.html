@@ -1,0 +1,35 @@
+{# Партиал: список столов на странице выбора стола.
+   Перерисовывается через HTMX при смене duration. #}
+{% if not free_tables and not busy_tables %}
+  <div class="text-center text-muted py-3">Нет столов</div>
+{% else %}
+  {% if not free_tables %}
+    <div class="alert mifud-alert-accent">
+      На выбранную длительность все столы заняты. Попробуйте другую длительность,
+      пропустить бронирование или оформить заказ на другое время.
+    </div>
+  {% endif %}
+  {% for table in free_tables %}
+    <label class="mifud-table-card mifud-table-card--selectable">
+      <input type="radio" name="table_id" value="{{ table.id }}" class="visually-hidden" required />
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <span class="fw-800 fs-5">№{{ table.number }}</span><br />
+          <span class="small text-muted">{{ table.seats }} места</span>
+        </div>
+        <span class="small fw-bold text-success">свободен</span>
+      </div>
+    </label>
+  {% endfor %}
+  {% for table in busy_tables %}
+    <div class="mifud-table-card is-busy">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <span class="fw-800 fs-5">№{{ table.number }}</span><br />
+          <span class="small text-muted">{{ table.seats }} места</span>
+        </div>
+        <span class="small fw-bold text-primary">занят</span>
+      </div>
+    </div>
+  {% endfor %}
+{% endif %}

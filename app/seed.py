@@ -115,8 +115,8 @@ with app.app_context():
 
     # ========== ДЕМО-ЮЗЕРЫ ==========
     demo_users = [
-        {'name': 'Admin',  'email': 'admin@mifi.ru', 'password': 'password', 'is_admin': True},
-        {'name': 'Иван',   'email': 'ivan@mifi.ru',  'password': 'password', 'is_admin': False},
+        {'name': 'Admin',  'email': 'admin@mifi.ru', 'password': 'password', 'is_admin': True},   # nosec B105 — seed
+        {'name': 'Иван',   'email': 'ivan@mifi.ru',  'password': 'password', 'is_admin': False},  # nosec B105 — seed
     ]
     users_added = 0
     for u in demo_users:

@@ -4,15 +4,17 @@
   <h2 class="h6 fw-bold mb-2">Статус заказа</h2>
   {% if order.status == 'cancelled' %}
     <div class="alert alert-danger mb-4">Заказ отменён</div>
+  {% elif order.status == 'expired' %}
+    <div class="alert mifud-alert-accent mb-4">Заказ не забран вовремя</div>
   {% else %}
     {% set step =
       1 if order.status == 'pending' else
-      2 if order.status in ['paid', 'confirmed'] else
+      2 if order.status == 'confirmed' else
       3 if order.status == 'ready' else
       4 if order.status == 'completed' else 0 %}
     <div class="mifud-timeline mb-4">
       {% for i, label, note in [
-        (1, 'Оформлен',        order.created_at.strftime('%H:%M')),
+        (1, 'Оформлен',        order.created_at | local_dt('%H:%M')),
         (2, 'Принят в работу', 'столовая готовит ваш заказ'),
         (3, 'Готов к выдаче',  'можно забирать'),
         (4, 'Выдан',           '')

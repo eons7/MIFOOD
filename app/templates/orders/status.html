@@ -20,7 +20,7 @@
     {# Заголовок заказа #}
     <div class="mb-3">
       <h1 class="h5 mifud-title mb-0">Заказ #{{ order.id }}</h1>
-      <span class="small text-muted">Оформлен {{ order.created_at.strftime('%d.%m.%Y в %H:%M') }}</span>
+      <span class="small text-muted">Оформлен {{ order.created_at | local_dt('%d.%m.%Y в %H:%M') }}</span>
     </div>
 
     {# Привязанная бронь #}
@@ -28,7 +28,9 @@
       <div class="mifud-card p-3 mb-3 d-flex align-items-center justify-content-between">
         <div>
           <div class="fw-bold">Стол №{{ order.reservation.table.number }}
-            {% if order.reservation.status == 'active' %}
+            {% if order.reservation.status == 'scheduled' %}
+              <span class="badge text-bg-info ms-1">запланирована</span>
+            {% elif order.reservation.status == 'active' %}
               <span class="badge text-bg-success ms-1">бронь активна</span>
             {% elif order.reservation.status == 'cancelled' %}
               <span class="badge text-bg-danger ms-1">отменена</span>
@@ -37,7 +39,7 @@
             {% endif %}
           </div>
           <div class="small text-muted">
-            {{ order.reservation.start_time.strftime('%H:%M') }}–{{ order.reservation.end_time.strftime('%H:%M') }} · {{ order.reservation.table.seats }} места
+            {{ order.reservation.start_time | local_dt('%H:%M') }}–{{ order.reservation.end_time | local_dt('%H:%M') }} · {{ order.reservation.table.seats }} места
           </div>
         </div>
         <a href="/reservations/" class="small fw-bold text-decoration-none text-primary">ВСЕ БРОНИ →</a>
@@ -73,14 +75,26 @@
       </table>
     </div>
 
-    {# Оплата онлайн (заглушка) #}
-    {% if order.status in ['pending', 'confirmed', 'ready'] %}
+    {# Оплата (отдельная ось от кухонного статуса) #}
+    {% if order.is_paid %}
+      <div class="alert alert-success fw-bold text-center mb-3">Оплачено онлайн</div>
+    {% elif order.status in ['pending', 'confirmed', 'ready'] %}
       <form method="post" action="{{ url_for('orders.pay', id=order.id) }}" class="mb-3">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn mifud-btn-primary w-100">ОПЛАТИТЬ ОНЛАЙН</button>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="btn mifud-btn-primary w-100 fw-bold">ОПЛАТИТЬ ОНЛАЙН</button>
       </form>
-    {% elif order.status == 'paid' %}
-      <div class="alert alert-success mb-3">Заказ оплачен</div>
+    {% elif order.status == 'completed' %}
+      {# Заказ выдан, но is_paid=False быть не должно — completed автопроставляет.
+         На всякий случай показываем нейтральный плейсхолдер. #}
+      <div class="alert alert-secondary mb-3">Оплата принята при выдаче</div>
+    {% endif %}
+
+    {# Алерт «не забран» #}
+    {% if order.status == 'expired' %}
+      <div class="alert mifud-alert-accent mb-3">
+        <strong>Заказ не был забран вовремя.</strong>
+        Если вы всё ещё в столовой — обратитесь к администратору, он может продлить время.
+      </div>
     {% endif %}
 
     {# Мини-игра #}
@@ -114,15 +128,15 @@
       </div>
     {% endif %}
 
-    {# Таймлайн статуса — обновляется через SSE без перезагрузки #}
-    <div hx-ext="sse" sse-connect="/sse/my-orders" sse-swap="order-status">
+    {# Таймлайн статуса — рефетчится через HTMX по SSE-сигналу #}
+    <div id="status-block-wrap">
       {% include 'orders/_status_block.html' %}
     </div>
 
     {# Время получения #}
     <div class="d-flex align-items-center justify-content-between fw-bold">
       <span>Время получения:</span>
-      <span>{{ order.pickup_time.strftime('%H:%M') }} сегодня</span>
+      <span>{{ order.pickup_time | local_dt('%H:%M') }} сегодня</span>
     </div>
   </section>
 
@@ -140,11 +154,11 @@
     (function() {
       var STATUS_LABELS = {
         'pending':   'Заказ ожидает',
-        'paid':      'Заказ оплачен',
         'confirmed': 'Заказ принят в работу',
         'ready':     'Заказ готов, можно забирать!',
         'completed': 'Заказ выдан',
-        'cancelled': 'Заказ отменён'
+        'cancelled': 'Заказ отменён',
+        'expired':   'Заказ не забран вовремя'
       };
       var THIS_ORDER_ID = {{ order.id }};
 
@@ -152,14 +166,24 @@
       // через addEventListener на источнике, найденном HTMX'ом.
       // Проще — открыть свой EventSource (он будет вторым; нагрузка минимальная).
       var es = new EventSource('/sse/my-orders');
-      es.addEventListener('order-toast', function(e) {
+      es.addEventListener('my-order-update', function(e) {
         try {
           var data = JSON.parse(e.data);
           if (data.order_id !== THIS_ORDER_ID) return;
+
+          // 1) Перерисовываем шкалу статуса (партиал)
+          fetch('/orders/' + THIS_ORDER_ID + '/status-block', {credentials: 'same-origin'})
+            .then(function(r) { return r.text(); })
+            .then(function(html) {
+              var wrap = document.getElementById('status-block-wrap');
+              if (wrap) wrap.innerHTML = html;
+            });
+
+          // 2) Тост (только при смене кухонного статуса)
+          if (!data.status) return;
           var toastEl = document.getElementById('order-toast');
           var bodyEl  = document.getElementById('order-toast-body');
           bodyEl.textContent = STATUS_LABELS[data.status] || ('Статус: ' + data.status);
-          // Цвет toast'а по статусу
           toastEl.className = 'toast align-items-center border-0 ' + (
             data.status === 'ready'     ? 'text-bg-success' :
             data.status === 'cancelled' ? 'text-bg-danger'  :
