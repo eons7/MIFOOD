@@ -14,6 +14,7 @@
       <h1 class="h4 mifud-title mb-4">Регистрация</h1>
 
       <form method="post" action="/auth/register" class="d-grid gap-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <div>
           <label class="visually-hidden" for="name">Имя</label>
           <input

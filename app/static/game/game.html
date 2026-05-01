@@ -21,8 +21,7 @@
   }
   canvas {
     display: block;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
+    image-rendering: auto;
     background: #c8c8c8;
     max-width: 100%;
     max-height: 100%;
@@ -45,7 +44,8 @@
 
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
-  ctx.imageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
 
   // --- Загрузка ресурсов ---
   const ASSET_BASE = "assets/";
@@ -116,7 +116,8 @@
   };
 
   function Enemy(y, season) {
-    this.x = randInt(0, WIDTH - 40); this.y = y; this.w = 40; this.h = 40;
+    this.w = 60; this.h = 60;
+    this.x = randInt(0, WIDTH - this.w); this.y = y;
     this.type = season;
     this.speed = randInt(2, 4);
     this.direction = Math.random() > 0.5 ? 1 : -1;
@@ -160,6 +161,13 @@
       score = 0;
       enemies = [];
       coins = [];
+      // Пересоздаём платформы: стартовая — гарантированно под игроком,
+      // остальные — равномерно вверх с шагом 80, чтобы все были достижимы
+      // (max прыжок = JUMP_FORCE^2 / (2*GRAVITY) ≈ 225px).
+      platforms = [{ x: player.x - 15, y: player.y + player.h + 5, w: 60, h: 10 }];
+      for (let i = 1; i < 7; i++) {
+        platforms.push({ x: randInt(0, WIDTH - 60), y: i * 80, w: 60, h: 10 });
+      }
     }
 
     const frameInterval = 1000 / FPS;
@@ -226,7 +234,7 @@
               p.x = randInt(0, WIDTH - 60);
               const r = Math.random();
               if (r < 0.10) {
-                enemies.push(new Enemy(p.y - 40, currentSeason()));
+                enemies.push(new Enemy(p.y - 60, currentSeason()));
               } else if (r < 0.20) {
                 // оригинал: elif random.random() < 0.20 — независимый roll,
                 // но в pygame коде это два отдельных random.random() — здесь

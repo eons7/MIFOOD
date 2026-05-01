@@ -1,0 +1,32 @@
+{# Партиал списка заказов студента. #}
+{% if orders %}
+  <div class="d-grid gap-3">
+    {% for order in orders %}
+      <a href="/orders/{{ order.id }}/status" class="text-decoration-none">
+        <div class="mifud-card p-3">
+          <div class="d-flex align-items-center justify-content-between mb-1">
+            <span class="fw-800">Заказ #{{ order.id }}</span>
+            {% include "orders/_status_badge.html" %}
+          </div>
+          <div class="small text-muted mb-1">{{ order.created_at | local_dt('%d.%m.%Y в %H:%M') }}</div>
+          {% if order.reservation and order.reservation.status in ('scheduled', 'active') %}
+            <div class="small mb-1">
+              <span class="badge text-bg-info">Стол №{{ order.reservation.table.number }}</span>
+            </div>
+          {% endif %}
+          <div class="d-flex align-items-center justify-content-between">
+            <span class="small text-muted">
+              {{ order.order_items|length }} {{ 'позиция' if order.order_items|length == 1 else 'позиций' }}
+            </span>
+            <span class="fw-bold">{{ order.total_price|int }} ₽</span>
+          </div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="text-center text-muted py-5">
+    <p class="mb-2">У вас пока нет заказов</p>
+    <a href="/menu" class="btn mifud-btn-primary">ПЕРЕЙТИ В МЕНЮ →</a>
+  </div>
+{% endif %}

@@ -1,0 +1,40 @@
+{# Партиал статуса заказа: используется и в status.html, и в SSE-стриме.
+   Корневой <div id="status-block"> сохраняется при swap'е, чтобы HTMX подменял outerHTML. #}
+<div id="status-block">
+  <h2 class="h6 fw-bold mb-2">Статус заказа</h2>
+  {% if order.status == 'cancelled' %}
+    <div class="alert alert-danger mb-4">Заказ отменён</div>
+  {% elif order.status == 'expired' %}
+    <div class="alert mifud-alert-accent mb-4">Заказ не забран вовремя</div>
+  {% else %}
+    {% set step =
+      1 if order.status == 'pending' else
+      2 if order.status == 'confirmed' else
+      3 if order.status == 'ready' else
+      4 if order.status == 'completed' else 0 %}
+    <div class="mifud-timeline mb-4">
+      {% for i, label, note in [
+        (1, 'Оформлен',        order.created_at | local_dt('%H:%M')),
+        (2, 'Принят в работу', 'столовая готовит ваш заказ'),
+        (3, 'Готов к выдаче',  'можно забирать'),
+        (4, 'Выдан',           '')
+      ] %}
+        {% if i < step %}
+          <div class="mifud-timeline-item is-done">
+        {% elif i == step %}
+          <div class="mifud-timeline-item is-active">
+        {% else %}
+          <div class="mifud-timeline-item">
+        {% endif %}
+          <div class="d-flex align-items-center gap-2">
+            <span class="fw-bold small text-muted">{{ i }}</span>
+            <span class="fw-bold">{{ label }}</span>
+          </div>
+          {% if note %}
+            <div class="small text-muted">{{ note }}</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>

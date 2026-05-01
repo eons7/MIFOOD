@@ -9,8 +9,7 @@ from app.models.menu import Category, MenuItem
 from app.models.user import User
 from app.services.auth_service import set_password
 
-# ВАЖНО: импортируем все модели, чтобы SQLAlchemy успел зарегистрировать имена
-# до конфигурации relationship'ов.
+# Импорт моделей до конфигурации relationship'ов SQLAlchemy.
 from app.models.order import Order, OrderItem  # noqa: F401
 from app.models.reservation import Reservation, Table  # noqa: F401
 
@@ -115,8 +114,8 @@ with app.app_context():
 
     # ========== ДЕМО-ЮЗЕРЫ ==========
     demo_users = [
-        {'name': 'Admin',  'email': 'admin@mifi.ru', 'password': 'password', 'is_admin': True},
-        {'name': 'Иван',   'email': 'ivan@mifi.ru',  'password': 'password', 'is_admin': False},
+        {'name': 'Admin',  'email': 'admin@mifi.ru', 'password': 'password', 'is_admin': True},   # nosec B105 — seed
+        {'name': 'Иван',   'email': 'ivan@mifi.ru',  'password': 'password', 'is_admin': False},  # nosec B105 — seed
     ]
     users_added = 0
     for u in demo_users:

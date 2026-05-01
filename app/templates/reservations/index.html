@@ -19,60 +19,13 @@
       <a href="/menu" class="fw-bold text-decoration-none text-primary">ПЕРЕЙТИ В МЕНЮ →</a>
     </div>
 
-    {# Активные брони #}
-    {% set active = reservations|selectattr('status', 'equalto', 'active')|list %}
-    {% if active %}
-      <h2 class="h6 mifud-title mb-2">Активные брони</h2>
-      <div class="d-grid gap-3 mb-4">
-        {% for r in active %}
-          <div class="mifud-card p-3">
-            <div class="d-flex align-items-center justify-content-between mb-1">
-              <span class="fw-800">Стол №{{ r.table.number }}</span>
-              <span class="badge text-bg-success">активна</span>
-            </div>
-            <div class="small text-muted">{{ r.table.seats }} места</div>
-            <div class="small text-muted">
-              Сегодня, {{ r.start_time.strftime('%d.%m.%Y') }}
-            </div>
-            <div class="fw-bold text-primary">
-              {{ r.start_time.strftime('%H:%M') }}–{{ r.end_time.strftime('%H:%M') }}
-            </div>
-            <div class="small text-muted mb-2">К заказу #{{ r.order_id }}</div>
-            <a href="/reservations/{{ r.id }}/cancel" class="btn mifud-btn-primary btn-sm w-100">ОТМЕНИТЬ БРОНЬ</a>
-          </div>
-        {% endfor %}
+    {# SSE: при my-order-update (включая reservation-status) рефетчим список. #}
+    <div hx-ext="sse" sse-connect="/sse/my-orders">
+      <div hx-get="{{ url_for('reservations.list_partial') }}"
+           hx-trigger="sse:my-order-update"
+           hx-swap="innerHTML">
+        {% include 'reservations/_list.html' %}
       </div>
-    {% endif %}
-
-    {# История #}
-    {% set history = reservations|rejectattr('status', 'equalto', 'active')|list %}
-    {% if history %}
-      <h2 class="h6 mifud-title mb-2">История</h2>
-      <div class="d-grid gap-2">
-        {% for r in history %}
-          <div class="mifud-card p-3" style="opacity: 0.7;">
-            <div class="d-flex align-items-center justify-content-between mb-1">
-              <span class="fw-800">Стол №{{ r.table.number }}</span>
-              {% if r.status == 'completed' %}
-                <span class="badge text-bg-secondary">завершена</span>
-              {% elif r.status == 'cancelled' %}
-                <span class="badge text-bg-danger">отменена</span>
-              {% endif %}
-            </div>
-            <div class="small text-muted">
-              {{ r.start_time.strftime('%d.%m.%Y') }} &middot; {{ r.start_time.strftime('%H:%M') }}–{{ r.end_time.strftime('%H:%M') }}
-            </div>
-            <div class="small text-muted">К заказу #{{ r.order_id }}</div>
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
-
-    {% if not reservations %}
-      <div class="text-center text-muted py-5">
-        <p class="mb-2">У вас пока нет бронирований</p>
-        <a href="/menu" class="btn mifud-btn-primary">ПЕРЕЙТИ В МЕНЮ →</a>
-      </div>
-    {% endif %}
+    </div>
   </section>
 {% endblock %}

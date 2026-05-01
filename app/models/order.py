@@ -1,5 +1,5 @@
-from datetime import datetime
 from app.extensions import db
+from app.utils.timezones import now_utc_naive
 
 
 class Order(db.Model):
@@ -8,14 +8,20 @@ class Order(db.Model):
     id          = db.Column(db.Integer,    primary_key=True)
     user_id     = db.Column(db.Integer,    db.ForeignKey('users.id'), nullable=False)
     pickup_time = db.Column(db.DateTime,   nullable=False)
-    created_at  = db.Column(db.DateTime,   nullable=False, default=datetime.utcnow)
+    created_at  = db.Column(db.DateTime,   nullable=False, default=now_utc_naive)
     status      = db.Column(db.String(20), nullable=False, default='pending')
-    # Возможные значения status:
+    # Кухонный FSM:
     # pending   — ожидает подтверждения
     # confirmed — принят в работу
     # ready     — готов к выдаче
     # completed — получен студентом
     # cancelled — отменён
+    # expired   — не забран в течение 15 мин с pickup_time
+    is_paid     = db.Column(db.Boolean, nullable=False, default=False)
+    # is_paid — независимая ось: оплата онлайн или налом при выдаче.
+    # Ставится True по двум путям:
+    #   1) студент жмёт «Оплатить онлайн» → /orders/<id>/pay
+    #   2) админ переводит заказ в completed → считаем, что нал получен
     total_price = db.Column(db.Float, nullable=False, default=0.0)
     comment     = db.Column(db.Text,  nullable=True)
 

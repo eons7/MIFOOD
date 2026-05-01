@@ -1,12 +1,15 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 
+from app.extensions import limiter
 from app.repositories import user_repository
 from app.services import auth_service
+from app.utils.security import audit
 
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit('10 per minute', methods=['POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('admin.orders') if current_user.is_admin else url_for('menu.index'))
@@ -15,13 +18,16 @@ def login():
         password = request.form.get('password')
         user = user_repository.get_by_email(email)
         if user is None or not auth_service.verify_password(user, password):
+            audit('auth.login_failed', email=email)
             flash('Неверный email или пароль', 'danger')
             return redirect(url_for('auth.login'))
         login_user(user)
+        audit('auth.login_ok', user_id=user.id)
         return redirect(url_for('admin.orders') if user.is_admin else url_for('menu.index'))
     return render_template('auth/login.html')
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
+@limiter.limit('5 per minute', methods=['POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('menu.index'))
@@ -36,7 +42,8 @@ def register():
         if user_repository.exists_by_email(email):
             flash('Email уже занят', 'danger')
             return redirect(url_for('auth.register'))
-        auth_service.register(name=name, email=email, password=password)
+        new_user = auth_service.register(name=name, email=email, password=password)
+        audit('auth.register', user_id=new_user.id, email=email)
         flash('Регистрация успешна! Войдите в систему.', 'success')
         return redirect(url_for('auth.login'))
     return render_template('auth/register.html')

@@ -11,6 +11,22 @@ menu_bp = Blueprint('menu', __name__)
 _COFFEE_SUFFIX_RE = re.compile(r'^(.+)_([SML])$')
 _SIZE_ORDER = {'S': 0, 'M': 1, 'L': 2}
 
+# Порядок категорий: меньшее число = выше. Отсутствующие — в конец по алфавиту.
+_CATEGORY_ORDER = {
+    'Сэндвичи':     0,
+    'Первые блюда': 1,
+    'Напитки':      2,
+    'Добавки':      3,
+}
+
+
+def _sort_items(items: list) -> list:
+    """Сортировка по (приоритет категории, имя категории, имя позиции)."""
+    def key(it):
+        cat_name = it.category.name if it.category else ''
+        return (_CATEGORY_ORDER.get(cat_name, 99), cat_name, it.name)
+    return sorted(items, key=key)
+
 
 def _cart_total(cart: dict) -> float:
     if not cart:
@@ -25,12 +41,7 @@ def _cart_count(cart: dict) -> int:
 
 
 def _group_coffee(items: list) -> list:
-    """Объединяет позиции с суффиксами _S/_M/_L в одну карточку.
-
-    • Имена матчятся паттерном <prefix>_<S|M|L>.
-    • Все такие позиции сводятся в карточку вида coffee.
-      Даже если размер один — префикс без суффикса используется как имя.
-    """
+    """Объединяет позиции с суффиксами _S/_M/_L в одну карточку coffee."""
     buckets: dict[str, list] = {}
     for it in items:
         m = _COFFEE_SUFFIX_RE.match(it.name)
@@ -72,8 +83,8 @@ def index():
     if category_id:
         query = query.filter_by(category_id=category_id)
 
-    items = query.order_by(MenuItem.name).all()
-    # Поиск фильтруем в Python — SQLite LIKE/LOWER не case-insensitive для кириллицы.
+    items = _sort_items(query.all())
+    # Поиск в Python: SQLite LIKE/LOWER не case-insensitive для кириллицы.
     if q:
         ql = q.lower()
         items = [it for it in items if ql in it.name.lower()]
@@ -103,8 +114,7 @@ def items():
     if category_id:
         query = query.filter_by(category_id=category_id)
 
-    items = query.order_by(MenuItem.name).all()
-    # Поиск фильтруем в Python — SQLite LIKE/LOWER не case-insensitive для кириллицы.
+    items = _sort_items(query.all())
     if q:
         ql = q.lower()
         items = [it for it in items if ql in it.name.lower()]

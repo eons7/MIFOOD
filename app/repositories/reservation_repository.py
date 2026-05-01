@@ -13,10 +13,22 @@ def get_by_user(user_id: int) -> list[Reservation]:
 def has_conflict(table_id: int, start_time, end_time) -> bool:
     return Reservation.query.filter(
         Reservation.table_id == table_id,
-        Reservation.status == 'active',
+        Reservation.status.in_(('scheduled', 'active')),
         Reservation.start_time < end_time,
         Reservation.end_time > start_time
     ).first() is not None
+
+
+def next_after(table_id: int, after_time, exclude_id: int | None = None) -> Reservation | None:
+    """Ближайшая scheduled/active бронь на столе с start_time >= after_time."""
+    q = Reservation.query.filter(
+        Reservation.table_id == table_id,
+        Reservation.status.in_(('scheduled', 'active')),
+        Reservation.start_time >= after_time,
+    )
+    if exclude_id is not None:
+        q = q.filter(Reservation.id != exclude_id)
+    return q.order_by(Reservation.start_time.asc()).first()
 
 
 def get_available_tables(start_time, end_time) -> list[Table]:

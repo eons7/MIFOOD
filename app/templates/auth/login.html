@@ -14,6 +14,7 @@
       <h1 class="h4 mifud-title mb-4">Войти в аккаунт</h1>
 
       <form method="post" action="/auth/login" class="d-grid gap-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <div>
           <label class="visually-hidden" for="email">Email</label>
           <input
