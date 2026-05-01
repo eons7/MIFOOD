@@ -25,6 +25,12 @@ def create_app(config_name: str | None = None):
     config_name = config_name or os.getenv('FLASK_ENV', 'default')
     app.config.from_object(config_map.get(config_name, config_map['default']))
 
+    if config_name == 'production':
+        if not app.config.get('SQLALCHEMY_DATABASE_URI'):
+            raise RuntimeError("DATABASE_URL не задан в production")
+        if os.getenv('SECRET_KEY') in (None, '', 'dev-secret-замени!'):
+            raise RuntimeError("SECRET_KEY должен быть задан в production")
+
     # ProxyFix включается только за реальным обратным прокси (production).
     if config_name == 'production':
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)

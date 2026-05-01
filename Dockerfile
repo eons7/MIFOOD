@@ -2,37 +2,29 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Устанавливаем зависимости системы (нужны для некоторых библиотек)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Копируем pyproject.toml
-COPY pyproject.toml .
+COPY pyproject.toml README.md ./
+COPY app/ ./app/
 
-# Устанавливаем pip и зависимости напрямую (без Poetry)
-RUN pip install --no-cache-dir \
-    flask>=3.0 \
-    flask-sqlalchemy>=3.1 \
-    flask-migrate>=4.0 \
-    flask-login>=0.6 \
-    flask-wtf>=1.2 \
-    python-dotenv>=1.0 \
-    email-validator>=2.1 \
-    Pillow>=10.0
+# Рантайм + prod-extras (psycopg2, gunicorn) из pyproject.toml
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir ".[prod]"
 
-# Копируем весь проект
 COPY . .
 
-# Создаём папку для базы данных (если используется SQLite)
 RUN mkdir -p /app/instance
 
-# Открываем порт (Flask по умолчанию 5000)
 EXPOSE 5000
 
-# Переменные окружения
-ENV FLASK_APP=run.py
-ENV FLASK_ENV=production
+ENV FLASK_APP=run.py \
+    FLASK_ENV=production \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
-# Запускаем приложение
-CMD ["python", "run.py"]
+RUN chmod +x /app/entrypoint.sh
+
+CMD ["/app/entrypoint.sh"]
