@@ -106,6 +106,15 @@ def create_app(config_name: str | None = None):
         response.headers['Service-Worker-Allowed'] = '/'
         return response
 
+    if config_name == 'production':
+        with app.app_context():
+            try:
+                from flask_migrate import upgrade
+                upgrade()
+                app.logger.info('migrations applied')
+            except Exception as e:
+                app.logger.warning(f'migrations skipped: {e}')
+
     return app
 
 
