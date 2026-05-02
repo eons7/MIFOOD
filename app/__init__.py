@@ -44,19 +44,10 @@ def create_app(config_name: str | None = None):
     is_prod = (config_name == 'production')
     csp = {
         'default-src': "'self'",
-        'script-src': [
-            "'self'",
-            "'unsafe-inline'",
-            'https://cdn.jsdelivr.net',
-            'https://unpkg.com',
-        ],
-        'style-src': [
-            "'self'",
-            "'unsafe-inline'",
-            'https://cdn.jsdelivr.net',
-        ],
+        'script-src': ["'self'", "'unsafe-inline'"],
+        'style-src': ["'self'", "'unsafe-inline'"],
         'img-src': ["'self'", 'data:', 'blob:'],
-        'font-src': ["'self'", 'https://cdn.jsdelivr.net', 'data:'],
+        'font-src': ["'self'", 'data:'],
         'connect-src': ["'self'"],
         'frame-ancestors': "'none'",
         'base-uri': "'self'",
