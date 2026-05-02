@@ -1,8 +1,19 @@
 #!/bin/sh
-set -e
+# entrypoint: миграции + запуск gunicorn
 
-echo "[entrypoint] running flask db upgrade"
-flask db upgrade
+set -u
+cd /app
+
+# FLASK_APP жёстко переопределяем — игнорируем внешние env vars с возможными пробелами
+unset FLASK_APP
+export FLASK_APP=run
+
+echo "[entrypoint] running 'python -m flask db upgrade' (FLASK_APP=run)"
+if python -m flask db upgrade; then
+    echo "[entrypoint] migrations OK"
+else
+    echo "[entrypoint] WARN: migrations failed, starting gunicorn anyway"
+fi
 
 PORT="${PORT:-5000}"
 WORKERS="${GUNICORN_WORKERS:-1}"
