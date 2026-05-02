@@ -49,7 +49,7 @@ def create_app(config_name: str | None = None):
         'img-src': ["'self'", 'data:', 'blob:'],
         'font-src': ["'self'", 'data:'],
         'connect-src': ["'self'"],
-        'frame-ancestors': "'none'",
+        'frame-ancestors': "'self'",
         'base-uri': "'self'",
     }
     talisman.init_app(
@@ -60,7 +60,7 @@ def create_app(config_name: str | None = None):
         content_security_policy=csp,
         content_security_policy_nonce_in=[],
         referrer_policy='strict-origin-when-cross-origin',
-        frame_options='DENY',
+        frame_options='SAMEORIGIN',
     )
 
     limiter.init_app(app)
@@ -102,6 +102,10 @@ def create_app(config_name: str | None = None):
         response = make_response(app.send_static_file('.well-known/security.txt'))
         response.headers['Content-Type'] = 'text/plain; charset=utf-8'
         return response
+
+    @app.route('/favicon.ico')
+    def favicon():
+        return app.send_static_file('img/logo.png')
 
     if config_name == 'production':
         with app.app_context():
