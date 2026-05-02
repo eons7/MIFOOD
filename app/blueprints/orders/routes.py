@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, abort
 from flask_login import login_required, current_user
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models import Order, OrderItem, MenuItem
 from app.repositories import order_repository
 from app.services import order_service, reservation_service, pubsub
@@ -31,6 +31,7 @@ def my_orders_list():
 
 @orders_bp.route('/create', methods=['GET', 'POST'])
 @login_required
+@limiter.limit('30 per minute', methods=['POST'])
 def create():
     cart = session.get('cart', {})
     draft = session.get('order_draft')
@@ -144,6 +145,7 @@ def badge(id):
 
 @orders_bp.route('/<int:id>/cancel', methods=['POST'])
 @login_required
+@limiter.limit('20 per minute')
 def cancel(id):
     order = order_repository.get_by_id(id)
     if order is None:

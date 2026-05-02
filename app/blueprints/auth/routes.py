@@ -1,10 +1,10 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import login_user, logout_user, login_required, current_user
 
 from app.extensions import limiter
 from app.repositories import user_repository
 from app.services import auth_service
-from app.utils.security import audit
+from app.utils.security import audit, validate_password
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -21,6 +21,8 @@ def login():
             audit('auth.login_failed', email=email)
             flash('Неверный email или пароль', 'danger')
             return redirect(url_for('auth.login'))
+        # Защита от session fixation: чистим старую анонимную сессию.
+        session.clear()
         login_user(user)
         audit('auth.login_ok', user_id=user.id)
         return redirect(url_for('admin.orders') if user.is_admin else url_for('menu.index'))
@@ -38,6 +40,10 @@ def register():
         password2 = request.form.get('password_confirm')
         if password != password2:
             flash('Пароли не совпадают', 'danger')
+            return redirect(url_for('auth.register'))
+        pwd_error = validate_password(password)
+        if pwd_error:
+            flash(pwd_error, 'danger')
             return redirect(url_for('auth.register'))
         if user_repository.exists_by_email(email):
             flash('Email уже занят', 'danger')

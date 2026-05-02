@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from datetime import timedelta
 
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models import Table
 from app.models.order import Order, OrderItem
 from app.models.menu import MenuItem
@@ -32,6 +32,7 @@ def _tables_for_duration(pickup_dt, duration: int):
 
 @reservations_bp.route('/select-table', methods=['GET', 'POST'])
 @login_required
+@limiter.limit('30 per minute', methods=['POST'])
 def select_table():
     """Шаг 2 оформления заказа с бронью. Финализирует draft из session в Order + Reservation."""
     draft = session.get('order_draft')
@@ -178,6 +179,7 @@ def list_partial():
 
 @reservations_bp.route('/<int:id>/cancel', methods=['POST'])
 @login_required
+@limiter.limit('20 per minute')
 def cancel(id):
     r = reservation_repository.get_by_id(id)
     if r is None:

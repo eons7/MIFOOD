@@ -3,6 +3,7 @@ import re
 from flask import Blueprint, render_template, redirect, url_for, request, session
 from flask_login import login_required
 
+from app.extensions import limiter
 from app.models import MenuItem, Category
 from app.repositories import menu_repository
 
@@ -125,6 +126,7 @@ def items():
 
 @menu_bp.route('/add/<int:id>', methods=['POST'])
 @login_required
+@limiter.limit('120 per minute')
 def add_to_cart(id):
     item = menu_repository.get_item_by_id(id)
     if item is None or not item.is_available:
@@ -150,6 +152,7 @@ def add_to_cart(id):
 
 @menu_bp.route('/remove/<int:id>', methods=['POST'])
 @login_required
+@limiter.limit('120 per minute')
 def remove_from_cart(id):
     cart = session.get('cart', {})
     key = str(id)
@@ -173,6 +176,7 @@ def remove_from_cart(id):
 
 @menu_bp.route('/update/<int:id>', methods=['POST'])
 @login_required
+@limiter.limit('120 per minute')
 def update_cart(id):
     qty = request.form.get('quantity', type=int) or 0
     cart = session.get('cart', {})

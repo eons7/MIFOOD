@@ -1,8 +1,24 @@
-"""Декоратор admin_required и audit-логгер."""
+"""Декоратор admin_required, audit-логгер, валидация паролей."""
+import re
 from functools import wraps
 
 from flask import abort, current_app, request
 from flask_login import current_user
+
+PASSWORD_MIN_LEN = 8
+
+
+def validate_password(password: str) -> str | None:
+    """Возвращает текст ошибки или None, если пароль валиден.
+    Требования: не короче 8 символов, минимум одна буква и одна цифра.
+    """
+    if not password or len(password) < PASSWORD_MIN_LEN:
+        return f'Пароль должен быть не короче {PASSWORD_MIN_LEN} символов'
+    if not re.search(r'[A-Za-zА-Яа-яЁё]', password):
+        return 'Пароль должен содержать хотя бы одну букву'
+    if not re.search(r'\d', password):
+        return 'Пароль должен содержать хотя бы одну цифру'
+    return None
 
 
 def admin_required(view):

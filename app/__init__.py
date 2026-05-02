@@ -97,6 +97,12 @@ def create_app(config_name: str | None = None):
         response.headers['Service-Worker-Allowed'] = '/'
         return response
 
+    @app.route('/.well-known/security.txt')
+    def security_txt():
+        response = make_response(app.send_static_file('.well-known/security.txt'))
+        response.headers['Content-Type'] = 'text/plain; charset=utf-8'
+        return response
+
     if config_name == 'production':
         with app.app_context():
             try:
