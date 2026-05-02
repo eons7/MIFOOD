@@ -33,7 +33,7 @@ def upgrade():
 
     # 2) Переносим существующие 'paid'-заказы:
     #    is_paid = True, status = 'pending' (кухня заново решит когда принять)
-    op.execute("UPDATE orders SET is_paid = 1, status = 'pending' WHERE status = 'paid'")
+    op.execute("UPDATE orders SET is_paid = TRUE, status = 'pending' WHERE status = 'paid'")
 
     # 3) Снимаем server_default — дальше дефолт ставит модель
     with op.batch_alter_table('orders') as batch_op:
@@ -44,6 +44,6 @@ def downgrade():
     # Откат: восстанавливаем 'paid' для is_paid=True заказов в статусе pending.
     # Не идеально (теряем confirmed/ready/completed с is_paid=True), но обратно
     # уместить два поля в одно невозможно без потерь.
-    op.execute("UPDATE orders SET status = 'paid' WHERE is_paid = 1 AND status = 'pending'")
+    op.execute("UPDATE orders SET status = 'paid' WHERE is_paid = TRUE AND status = 'pending'")
     with op.batch_alter_table('orders') as batch_op:
         batch_op.drop_column('is_paid')
