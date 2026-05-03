@@ -24,6 +24,8 @@ class Order(db.Model):
     #   2) админ переводит заказ в completed → считаем, что нал получен
     total_price = db.Column(db.Float, nullable=False, default=0.0)
     comment     = db.Column(db.Text,  nullable=True)
+    # ID платежа в ЮKassa. None если оплата онлайн не инициирована.
+    payment_id  = db.Column(db.String(64), nullable=True, index=True)
 
     order_items = db.relationship(
         'OrderItem',

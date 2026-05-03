@@ -1,9 +1,9 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, abort, current_app
 from flask_login import login_required, current_user
 from app.extensions import db, limiter
 from app.models import Order, OrderItem, MenuItem
 from app.repositories import order_repository
-from app.services import order_service, reservation_service, pubsub
+from app.services import order_service, reservation_service, pubsub, payment_service
 from app.utils.timezones import parse_local_to_utc
 
 orders_bp = Blueprint('orders', __name__)
@@ -178,7 +178,16 @@ def pay(id):
     if order.status not in ('pending', 'confirmed', 'ready'):
         flash('Заказ нельзя оплатить онлайн в текущем статусе', 'danger')
         return redirect(url_for('orders.status', id=id))
-    order.is_paid = True
+    if not payment_service.is_enabled():
+        flash('Онлайн-оплата временно недоступна', 'danger')
+        return redirect(url_for('orders.status', id=id))
+    return_url = url_for('orders.status', id=order.id, _external=True)
+    try:
+        payment = payment_service.create_payment(order, return_url)
+    except Exception as exc:
+        current_app.logger.exception('payment.create_failed: %s', exc)
+        flash('Не удалось создать платёж, попробуйте позже', 'danger')
+        return redirect(url_for('orders.status', id=id))
+    order.payment_id = payment.id
     db.session.commit()
-    flash('Оплата прошла успешно!', 'success')
-    return redirect(url_for('orders.status', id=id))
+    return redirect(payment.confirmation.confirmation_url)

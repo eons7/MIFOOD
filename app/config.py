@@ -40,6 +40,11 @@ class BaseConfig:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     WTF_CSRF_TIME_LIMIT = None  # токен живёт всю сессию
 
+    # ЮKassa: тестовый префикс ключа `test_`, боевой `live_`. Если не задано —
+    # онлайн-оплата отключена (кнопка не показывается).
+    YOOKASSA_SHOP_ID = os.getenv("YOOKASSA_SHOP_ID")
+    YOOKASSA_SECRET_KEY = os.getenv("YOOKASSA_SECRET_KEY")
+
 
 class DevelopmentConfig(BaseConfig):
     DEBUG = True

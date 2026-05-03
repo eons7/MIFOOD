@@ -74,6 +74,7 @@ def create_app(config_name: str | None = None):
     from app.blueprints.reservations.routes import reservations_bp
     from app.blueprints.admin.routes import admin_bp
     from app.blueprints.sse.routes import sse_bp
+    from app.blueprints.payments.routes import payments_bp
 
     app.register_blueprint(auth_bp,         url_prefix='/auth')
     app.register_blueprint(menu_bp,         url_prefix='/menu')
@@ -81,6 +82,7 @@ def create_app(config_name: str | None = None):
     app.register_blueprint(reservations_bp, url_prefix='/reservations')
     app.register_blueprint(admin_bp,        url_prefix='/admin')
     app.register_blueprint(sse_bp,          url_prefix='/sse')
+    app.register_blueprint(payments_bp,     url_prefix='/api')
 
     @app.route('/')
     def root():

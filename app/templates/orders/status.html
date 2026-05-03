@@ -78,6 +78,12 @@
     {# Оплата (отдельная ось от кухонного статуса) #}
     {% if order.is_paid %}
       <div class="alert alert-success fw-bold text-center mb-3">Оплачено онлайн</div>
+    {% elif order.payment_id and order.status in ['pending', 'confirmed', 'ready'] %}
+      <div class="alert mifud-alert-accent fw-bold text-center mb-3"
+           hx-get="{{ url_for('orders.status_block', id=order.id) }}"
+           hx-trigger="every 3s" hx-swap="none">
+        Оплата проверяется...
+      </div>
     {% elif order.status in ['pending', 'confirmed', 'ready'] %}
       <form method="post" action="{{ url_for('orders.pay', id=order.id) }}" class="mb-3">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
