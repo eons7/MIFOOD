@@ -5,7 +5,7 @@
    - SSE и POST/PUT/DELETE — всегда из сети, без кэша
 */
 
-const CACHE = 'mifud-v1';
+const CACHE = 'mifud-v2';
 const PRECACHE = [
   '/static/css/main.css',
   '/static/js/main.js',
