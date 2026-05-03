@@ -117,7 +117,11 @@
     <div class="d-flex justify-content-between mb-4">
       <a href="/orders" class="fw-bold text-decoration-none text-primary">← ВСЕ ЗАКАЗЫ</a>
       {% if order.status in ['pending', 'confirmed'] %}
-        <a href="/orders/{{ order.id }}/cancel" class="fw-bold text-decoration-none text-danger">ОТМЕНИТЬ ЗАКАЗ</a>
+        <form method="post" action="{{ url_for('orders.cancel', id=order.id) }}" class="m-0"
+              onsubmit="return confirm('Отменить заказ?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button type="submit" class="btn btn-link p-0 fw-bold text-decoration-none text-danger">ОТМЕНИТЬ ЗАКАЗ</button>
+        </form>
       {% endif %}
     </div>
 
