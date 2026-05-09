@@ -158,6 +158,20 @@
         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Закрыть"></button>
       </div>
     </div>
+
+    {# Toast установки PWA — показывается один раз после первого заказа #}
+    <div id="pwa-install-toast" class="toast border-0 text-bg-primary" role="alert" aria-live="polite" data-bs-autohide="false">
+      <div class="toast-body">
+        <div class="fw-bold mb-1">Установить МИФУД?</div>
+        <div class="small mb-2" id="pwa-install-text">
+          Чтобы открывать одним тапом с рабочего стола.
+        </div>
+        <div class="d-flex gap-2">
+          <button type="button" id="pwa-install-btn" class="btn btn-light btn-sm fw-bold">Установить</button>
+          <button type="button" class="btn btn-link btn-sm text-white" data-bs-dismiss="toast" id="pwa-install-dismiss">Не сейчас</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -203,6 +217,68 @@
           t.show();
         } catch (err) { /* ignore */ }
       });
+    })();
+
+    // === PWA install prompt ===
+    (function () {
+      var STORAGE_KEY = 'pwa_dismissed_at';
+      var DISMISS_DAYS = 60;
+      var toastEl = document.getElementById('pwa-install-toast');
+      if (!toastEl) return;
+
+      // Уже установлено как PWA — никогда не показываем
+      if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) return;
+
+      // Юзер недавно отказался — пропускаем
+      var dismissedAt = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+      if (dismissedAt && (Date.now() - dismissedAt) < DISMISS_DAYS * 86400000) return;
+
+      var deferredPrompt = null;
+      var btn = document.getElementById('pwa-install-btn');
+      var textEl = document.getElementById('pwa-install-text');
+
+      function show() {
+        var t = bootstrap.Toast.getOrCreateInstance(toastEl);
+        t.show();
+      }
+
+      // Chrome / Edge / Android
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        setTimeout(show, 1500); // лёгкая задержка чтоб не выпрыгивало мгновенно
+      });
+
+      btn.addEventListener('click', function () {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.finally(function () {
+            deferredPrompt = null;
+            localStorage.setItem(STORAGE_KEY, '9999999999999'); // навсегда (после клика по «Установить»)
+            bootstrap.Toast.getInstance(toastEl).hide();
+          });
+        }
+      });
+
+      document.getElementById('pwa-install-dismiss').addEventListener('click', function () {
+        localStorage.setItem(STORAGE_KEY, String(Date.now()));
+      });
+
+      // После успешной установки — навсегда выключаем
+      window.addEventListener('appinstalled', function () {
+        localStorage.setItem(STORAGE_KEY, '9999999999999');
+        var inst = bootstrap.Toast.getInstance(toastEl);
+        if (inst) inst.hide();
+      });
+
+      // iOS Safari: beforeinstallprompt не поддерживается, но проверим UA
+      var ua = window.navigator.userAgent;
+      var isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+      if (isIOS && !window.navigator.standalone) {
+        textEl.innerHTML = 'Нажмите <strong>Поделиться</strong> ↑ → <strong>«На экран Домой»</strong>';
+        document.getElementById('pwa-install-btn').style.display = 'none';
+        setTimeout(show, 1500);
+      }
     })();
   </script>
 {% endblock %}
