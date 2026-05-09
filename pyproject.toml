@@ -36,5 +36,9 @@ prod = [
     "psycopg2-binary>=2.9",
 ]
 
+[tool.setuptools.packages.find]
+include = ["app*"]
+exclude = ["tests*", "migrations*", "instance*", "scripts*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"] 
