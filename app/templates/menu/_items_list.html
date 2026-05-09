@@ -30,7 +30,6 @@
                   data-price="{{ s.item.price|int }}"
                   data-qty="{{ cart.get(s.item.id|string, 0) if cart else 0 }}"
                   {% if loop.first %}checked{% endif %}
-                  onchange="coffeeSelectSize(this)"
                 />
                 <span class="mifud-size-label">
                   <span class="mifud-size-letter">{{ s.size }}</span>
@@ -40,7 +39,7 @@
             {% endfor %}
           </div>
         {% else %}
-          {# Один размер — радио скрыто, но нужно для coffeeAdd()/Remove() #}
+          {# Один размер — радио скрыто, но нужно для add/remove handlers в main.js #}
           <input type="radio" checked hidden
                  data-id="{{ g.sizes[0].item.id }}"
                  data-price="{{ g.sizes[0].item.price|int }}"
@@ -50,9 +49,9 @@
         <div class="mifud-product-meta">
           <span class="mifud-price" data-coffee-price>{{ g.sizes[0].item.price|int }} ₽</span>
           <div class="mifud-stepper">
-            <button type="button" aria-label="Убавить" onclick="coffeeRemove(this)">−</button>
+            <button type="button" aria-label="Убавить" data-coffee-remove>−</button>
             <span class="mifud-stepper-value" data-coffee-qty>{{ cart.get(g.sizes[0].item.id|string, 0) if cart else 0 }}</span>
-            <button type="button" aria-label="Добавить" onclick="coffeeAdd(this)">+</button>
+            <button type="button" aria-label="Добавить" data-coffee-add>+</button>
           </div>
         </div>
       </div>

@@ -123,8 +123,7 @@
     <div class="d-flex justify-content-between mb-4">
       <a href="/orders" class="fw-bold text-decoration-none text-primary">← ВСЕ ЗАКАЗЫ</a>
       {% if order.status in ['pending', 'confirmed'] %}
-        <form method="post" action="{{ url_for('orders.cancel', id=order.id) }}" class="m-0"
-              onsubmit="return confirm('Отменить заказ?');">
+        <form method="post" action="{{ url_for('orders.cancel', id=order.id) }}" class="m-0" data-confirm="Отменить заказ?">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
           <button type="submit" class="btn btn-link p-0 fw-bold text-decoration-none text-danger">ОТМЕНИТЬ ЗАКАЗ</button>
         </form>
@@ -174,111 +173,6 @@
     </div>
   </div>
 
-  <script>
-    (function() {
-      var STATUS_LABELS = {
-        'pending':   'Заказ ожидает',
-        'confirmed': 'Заказ принят в работу',
-        'ready':     'Заказ готов, можно забирать!',
-        'completed': 'Заказ выдан',
-        'cancelled': 'Заказ отменён',
-        'expired':   'Заказ не забран вовремя'
-      };
-      var THIS_ORDER_ID = {{ order.id }};
-
-      // SSE подключение само поднимется через HTMX-extension; слушаем то же соединение
-      // через addEventListener на источнике, найденном HTMX'ом.
-      // Проще — открыть свой EventSource (он будет вторым; нагрузка минимальная).
-      var es = new EventSource('/sse/my-orders');
-      es.addEventListener('my-order-update', function(e) {
-        try {
-          var data = JSON.parse(e.data);
-          if (data.order_id !== THIS_ORDER_ID) return;
-
-          // 1) Перерисовываем шкалу статуса (партиал)
-          fetch('/orders/' + THIS_ORDER_ID + '/status-block', {credentials: 'same-origin'})
-            .then(function(r) { return r.text(); })
-            .then(function(html) {
-              var wrap = document.getElementById('status-block-wrap');
-              if (wrap) wrap.innerHTML = html;
-            });
-
-          // 2) Тост (только при смене кухонного статуса)
-          if (!data.status) return;
-          var toastEl = document.getElementById('order-toast');
-          var bodyEl  = document.getElementById('order-toast-body');
-          bodyEl.textContent = STATUS_LABELS[data.status] || ('Статус: ' + data.status);
-          toastEl.className = 'toast align-items-center border-0 ' + (
-            data.status === 'ready'     ? 'text-bg-success' :
-            data.status === 'cancelled' ? 'text-bg-danger'  :
-                                          'text-bg-primary'
-          );
-          var t = bootstrap.Toast.getOrCreateInstance(toastEl, {delay: 6000});
-          t.show();
-        } catch (err) { /* ignore */ }
-      });
-    })();
-
-    // === PWA install prompt ===
-    (function () {
-      var STORAGE_KEY = 'pwa_dismissed_at';
-      var DISMISS_DAYS = 60;
-      var toastEl = document.getElementById('pwa-install-toast');
-      if (!toastEl) return;
-
-      // Уже установлено как PWA — никогда не показываем
-      if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) return;
-
-      // Юзер недавно отказался — пропускаем
-      var dismissedAt = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
-      if (dismissedAt && (Date.now() - dismissedAt) < DISMISS_DAYS * 86400000) return;
-
-      var deferredPrompt = null;
-      var btn = document.getElementById('pwa-install-btn');
-      var textEl = document.getElementById('pwa-install-text');
-
-      function show() {
-        var t = bootstrap.Toast.getOrCreateInstance(toastEl);
-        t.show();
-      }
-
-      // Chrome / Edge / Android
-      window.addEventListener('beforeinstallprompt', function (e) {
-        e.preventDefault();
-        deferredPrompt = e;
-        setTimeout(show, 1500); // лёгкая задержка чтоб не выпрыгивало мгновенно
-      });
-
-      btn.addEventListener('click', function () {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          deferredPrompt.userChoice.finally(function () {
-            deferredPrompt = null;
-            localStorage.setItem(STORAGE_KEY, '9999999999999'); // навсегда (после клика по «Установить»)
-            bootstrap.Toast.getInstance(toastEl).hide();
-          });
-        }
-      });
-
-      document.getElementById('pwa-install-dismiss').addEventListener('click', function () {
-        localStorage.setItem(STORAGE_KEY, String(Date.now()));
-      });
-
-      // После успешной установки — навсегда выключаем
-      window.addEventListener('appinstalled', function () {
-        localStorage.setItem(STORAGE_KEY, '9999999999999');
-        var inst = bootstrap.Toast.getInstance(toastEl);
-        if (inst) inst.hide();
-      });
-
-      // iOS Safari: beforeinstallprompt не поддерживается, но проверим UA
-      var ua = window.navigator.userAgent;
-      var isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
-      if (isIOS && !window.navigator.standalone) {
-        textEl.innerHTML = 'Нажмите <strong>Поделиться</strong> ↑ → <strong>«На экран Домой»</strong>';
-        document.getElementById('pwa-install-btn').style.display = 'none';
-        setTimeout(show, 1500);
-      }
-    })();
-  </script>
+  <div id="order-status-root" data-order-id="{{ order.id }}"></div>
+  <script src="{{ url_for('static', filename='js/order_status.js') }}"></script>
 {% endblock %}
