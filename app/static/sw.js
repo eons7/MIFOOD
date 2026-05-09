@@ -5,7 +5,7 @@
    - SSE и POST/PUT/DELETE — всегда из сети, без кэша
 */
 
-const CACHE = 'mifud-v2';
+const CACHE = 'mifud-v3';
 const PRECACHE = [
   '/static/css/main.css',
   '/static/js/main.js',
@@ -13,6 +13,11 @@ const PRECACHE = [
   '/static/img/icon-192.png',
   '/static/img/icon-512.png',
   '/static/manifest.json',
+  '/static/offline.html',
+  '/static/vendor/bootstrap.min.css',
+  '/static/vendor/bootstrap.bundle.min.js',
+  '/static/vendor/htmx.min.js',
+  '/static/vendor/htmx-sse.js',
 ];
 
 self.addEventListener('install', (event) => {
@@ -54,7 +59,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // HTML и остальное — network-first, кэш как fallback
+  // HTML и остальное — network-first, кэш как fallback, offline.html — финальный fallback
   event.respondWith(
     fetch(req).then((res) => {
       if (res.ok && res.headers.get('content-type')?.includes('text/html')) {
@@ -62,6 +67,8 @@ self.addEventListener('fetch', (event) => {
         caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
       }
       return res;
-    }).catch(() => caches.match(req))
+    }).catch(() =>
+      caches.match(req).then((hit) => hit || caches.match('/static/offline.html'))
+    )
   );
 });
