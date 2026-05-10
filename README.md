@@ -66,7 +66,7 @@
 
 ## 🗄️ Схема базы данных
 
-![ER-диаграмма](screenshots/MIFOOD_ERdiagram.png)
+![ER-диаграмма](docs/screenshots/MIFOOD_ERdiagram.png)
 
 ---
 
