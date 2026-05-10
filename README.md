@@ -115,31 +115,31 @@ pytest
 
 | Вход в аккаунт | Регистрация |
 | :---: | :---: |
-| <img src="screenshots/login.jpg" height="500"/> | <img src="screenshots/registration.jpg" height="500"/> |
+| <img src="docs/screenshots/login.jpg" height="500"/> | <img src="docs/screenshots/registration.jpg" height="500"/> |
 
 ### 🏠 Клиентская часть
 
 ### Меню
 | | | |
 | :---: | :---: | :---: |
-| <img src="screenshots/menu1.jpg" height="500"/> | <img src="screenshots/menu2.jpg" height="500"/> | <img src="screenshots/menu3.jpg" height="500"/> |
+| <img src="docs/screenshots/menu1.jpg" height="500"/> | <img src="docs/screenshots/menu2.jpg" height="500"/> | <img src="docs/screenshots/menu3.jpg" height="500"/> |
 
 ### Оформление заказа
 | | | |
 | :---: | :---: | :---: |
-| <img src="screenshots/order_reg.jpg" height="500"/> | <img src="screenshots/order1.jpg" height="500"/> | <img src="screenshots/order2.jpg" height="500"/> |
+| <img src="docs/screenshots/order_reg.jpg" height="500"/> | <img src="docs/screenshots/order1.jpg" height="500"/> | <img src="docs/screenshots/order2.jpg" height="500"/> |
 
 ### Выбор стола
 | | |
 | :---: | :---: |
-| <img src="screenshots/table_selection1.jpg" height="500"/> | <img src="screenshots/table_selection2.jpg" height="500"/> |
+| <img src="docs/screenshots/table_selection1.jpg" height="500"/> | <img src="docs/screenshots/table_selection2.jpg" height="500"/> |
 
 ### Мои заказы
 
-<img src="screenshots/my_orders.jpg" height="500"/>
+<img src="docs/screenshots/my_orders.jpg" height="500"/>
 
 ### 🔧 Панель администратора
 
 | Управление заказами | Управление меню | Управление столами |
 | :---: | :---: | :---: |
-| <img src="screenshots/order_management.jpg" height="500"/> | <img src="screenshots/menu_management.jpg" height="500"/> | <img src="screenshots/table_management.jpg" height="500"> |
+| <img src="docs/screenshots/order_management.jpg" height="500"/> | <img src="docs/screenshots/menu_management.jpg" height="500"/> | <img src="docs/screenshots/table_management.jpg" height="500"> |
