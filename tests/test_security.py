@@ -194,9 +194,12 @@ class TestRegistrationPasswordPolicy:
             'name': 'X', 'email': 'new@x.x',
             'password': '123', 'password_confirm': '123',
         })
-        # Должен редирект на /auth/register (с flash об ошибке), не 200
-        assert r.status_code == 302
-        # Юзер не создан
+        # Форма ре-рендерится с введёнными данными — 200, не редирект.
+        assert r.status_code == 200
+        # Имя/email сохранились в форме (не очистились).
+        body = r.get_data(as_text=True)
+        assert 'new@x.x' in body
+        # Юзер не создан.
         assert User.query.filter_by(email='new@x.x').count() == 0
 
     def test_valid_password_creates_user(self, client):

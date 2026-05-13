@@ -24,6 +24,7 @@
             class="form-control form-control-lg mifud-input"
             placeholder="ИМЯ"
             autocomplete="name"
+            value="{{ form_data.name if form_data else '' }}"
             required
           />
         </div>
@@ -37,6 +38,7 @@
             class="form-control form-control-lg mifud-input"
             placeholder="EMAIL"
             autocomplete="email"
+            value="{{ form_data.email if form_data else '' }}"
             required
           />
         </div>
@@ -50,8 +52,14 @@
             class="form-control form-control-lg mifud-input"
             placeholder="ПАРОЛЬ"
             autocomplete="new-password"
+            minlength="8"
             required
           />
+          <ul class="small text-muted mt-2 mb-0 ps-3">
+            <li>не менее 8 символов</li>
+            <li>хотя бы одна буква</li>
+            <li>хотя бы одна цифра</li>
+          </ul>
         </div>
 
         <div>
@@ -63,6 +71,7 @@
             class="form-control form-control-lg mifud-input"
             placeholder="ПОВТОР ПАРОЛЯ"
             autocomplete="new-password"
+            minlength="8"
             required
           />
         </div>

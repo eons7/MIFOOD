@@ -38,16 +38,18 @@ def register():
         email = request.form.get('email')
         password = request.form.get('password')
         password2 = request.form.get('password_confirm')
+        # При ошибке сохраняем имя+email в форме, очищаем только поля паролей.
+        form_data = {'name': name, 'email': email}
         if password != password2:
             flash('Пароли не совпадают', 'danger')
-            return redirect(url_for('auth.register'))
+            return render_template('auth/register.html', form_data=form_data)
         pwd_error = validate_password(password)
         if pwd_error:
             flash(pwd_error, 'danger')
-            return redirect(url_for('auth.register'))
+            return render_template('auth/register.html', form_data=form_data)
         if user_repository.exists_by_email(email):
             flash('Email уже занят', 'danger')
-            return redirect(url_for('auth.register'))
+            return render_template('auth/register.html', form_data=form_data)
         new_user = auth_service.register(name=name, email=email, password=password)
         audit('auth.register', user_id=new_user.id, email=email)
         flash('Регистрация успешна! Войдите в систему.', 'success')
