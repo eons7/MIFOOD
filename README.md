@@ -120,9 +120,9 @@ pytest
 ### 🏠 Клиентская часть
 
 ### Меню
-| | | |
-| :---: | :---: | :---: |
-| <img src="docs/screenshots/menu1.jpg" height="500"/> | <img src="docs/screenshots/menu2.jpg" height="500"/> | <img src="docs/screenshots/menu3.jpg" height="500"/> |
+| | |
+| :---: | :---: |
+| <img src="docs/screenshots/menu1.jpg" height="500"/> | <img src="docs/screenshots/menu2.jpg" height="500"/> |
 
 ### Оформление заказа
 | | | |
