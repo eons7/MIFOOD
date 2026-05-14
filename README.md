@@ -120,9 +120,9 @@ pytest
 ### 🏠 Клиентская часть
 
 ### Меню
-| | | |
-| :---: | :---: | :---: |
-| <img src="docs/screenshots/menu1.jpg" height="500"/> | <img src="docs/screenshots/menu2.jpg" height="500"/> | <img src="docs/screenshots/menu3.jpg" height="500"/> |
+| | |
+| :---: | :---: |
+| <img src="docs/screenshots/menu1.jpg" height="500"/> | <img src="docs/screenshots/menu2.jpg" height="500"/> |
 
 ### Оформление заказа
 | | | |
@@ -137,6 +137,10 @@ pytest
 ### Мои заказы
 
 <img src="docs/screenshots/my_orders.jpg" height="500"/>
+
+### Мои брони
+
+<img src="docs/screenshots/my_reservations.jpg" height="500"/>
 
 ### 🔧 Панель администратора
 
