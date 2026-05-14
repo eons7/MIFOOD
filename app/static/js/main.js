@@ -19,6 +19,14 @@ document.body.addEventListener('htmx:responseError', function (e) {
   alert(msg);
 });
 
+// Кнопки с data-reload-on-success после успешного HTMX-запроса перезагружают страницу.
+// Используется на странице оформления заказа для +/-/✕ позиций.
+document.body.addEventListener('htmx:afterRequest', function (e) {
+  const trigger = e.detail && e.detail.elt;
+  if (!trigger || !trigger.hasAttribute || !trigger.hasAttribute('data-reload-on-success')) return;
+  if (e.detail.successful) window.location.reload();
+});
+
 // === Service Worker ===
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(() => {});
