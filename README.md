@@ -138,6 +138,10 @@ pytest
 
 <img src="docs/screenshots/my_orders.jpg" height="500"/>
 
+### Мои брони
+
+<img src="docs/screenshots/my_reservations.jpg" height="500"/>
+
 ### 🔧 Панель администратора
 
 | Управление заказами | Управление меню | Управление столами |
