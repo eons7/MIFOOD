@@ -43,12 +43,12 @@
                     <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1"
                             hx-post="/menu/remove/{{ item.menu_item.id }}"
                             hx-swap="none"
-                            hx-on::after-request="if(event.detail.successful) window.location.reload()">−</button>
+                            data-reload-on-success>−</button>
                     <span class="fw-bold">{{ item.quantity }}</span>
                     <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1"
                             hx-post="/menu/add/{{ item.menu_item.id }}"
                             hx-swap="none"
-                            hx-on::after-request="if(event.detail.successful) window.location.reload()">+</button>
+                            data-reload-on-success>+</button>
                   </div>
                 </td>
                 <td class="text-end fw-bold">{{ (item.menu_item.price * item.quantity)|int }} ₽</td>
@@ -57,7 +57,7 @@
                           hx-post="/menu/update/{{ item.menu_item.id }}"
                           hx-vals='{"quantity": 0}'
                           hx-swap="none"
-                          hx-on::after-request="if(event.detail.successful) window.location.reload()">&times;</button>
+                          data-reload-on-success>&times;</button>
                 </td>
               </tr>
             {% endfor %}
