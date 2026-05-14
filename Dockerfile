@@ -20,10 +20,10 @@ RUN mkdir -p /app/instance
 
 EXPOSE 5000
 
-ENV FLASK_APP=run.py \
+ENV FLASK_APP=wsgi \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-RUN chmod +x /app/entrypoint.sh
+RUN chmod +x /app/scripts/entrypoint.sh
 
-CMD ["/app/entrypoint.sh"]
+CMD ["/app/scripts/entrypoint.sh"]

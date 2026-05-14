@@ -6,9 +6,9 @@ cd /app
 
 # FLASK_APP жёстко переопределяем — игнорируем внешние env vars с возможными пробелами
 unset FLASK_APP
-export FLASK_APP=run
+export FLASK_APP=wsgi
 
-echo "[entrypoint] running 'python -m flask db upgrade' (FLASK_APP=run)"
+echo "[entrypoint] running 'python -m flask db upgrade' (FLASK_APP=wsgi)"
 if python -m flask db upgrade; then
     echo "[entrypoint] migrations OK"
 else
@@ -28,4 +28,4 @@ exec gunicorn \
     --timeout 120 \
     --access-logfile - \
     --error-logfile - \
-    "run:app"
+    "wsgi:app"

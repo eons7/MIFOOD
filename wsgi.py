@@ -10,9 +10,9 @@ def _apply_migrations():
     with app.app_context():
         try:
             upgrade()
-            print("[run] migrations applied", flush=True)
+            print("[wsgi] migrations applied", flush=True)
         except Exception as e:
-            print(f"[run] migrations skipped: {e}", flush=True)
+            print(f"[wsgi] migrations skipped: {e}", flush=True)
 
 
 if __name__ == "__main__":
