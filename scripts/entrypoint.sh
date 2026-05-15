@@ -17,7 +17,7 @@ fi
 
 PORT="${PORT:-5000}"
 WORKERS="${GUNICORN_WORKERS:-1}"
-THREADS="${GUNICORN_THREADS:-8}"
+THREADS="${GUNICORN_THREADS:-32}"
 
 echo "[entrypoint] starting gunicorn on 0.0.0.0:${PORT} workers=${WORKERS} threads=${THREADS}"
 exec gunicorn \
